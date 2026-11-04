@@ -12,7 +12,8 @@
 	import { MAX_EMOJI_BYTES, encodeEmoji, type Encoded } from '$lib/render/encode';
 	import { EMOJI_NAME_PATTERN, altOf, saveEmoji } from '$lib/atproto/bluemoji';
 	import { session } from '$lib/atproto/session.svelte';
-	import { getLocal, newLocalId, putLocal } from '$lib/store/local';
+	import { rememberEmoji } from '$lib/store/history';
+	import { getLocal } from '$lib/store/local';
 	import { NAGI_URL } from '$lib/nagi';
 
 	// 編集できるのはブラウザ保存の絵文字だけ。PDS の絵文字は Nagi の投稿から CID で参照されるので上書きしない
@@ -74,12 +75,33 @@
 		return result;
 	}
 
+	/**
+	 * ダウンロードや PDS 保存をしたら、レシピと画像をこのブラウザの履歴に残す。
+	 * PDS の絵文字は編集しないので、あとから作り直せるのはこの履歴だけ。
+	 */
+	async function remember(r: Encoded, rkey?: string) {
+		try {
+			const entry = await rememberEmoji({
+				id: editing?.id,
+				name: nameValid ? name : 'emoji',
+				recipe: $state.snapshot(recipe) as Recipe,
+				encoded: r,
+				rkey
+			});
+			editing = { kind: 'local', id: entry.id, createdAt: entry.createdAt };
+			void goto(`/?local=${entry.id}`, { replaceState: true, keepFocus: true, noScroll: true });
+		} catch {
+			// 履歴に残せなくても（プライベートブラウズ等）ダウンロード・保存自体は成功している
+		}
+	}
+
 	async function download() {
 		busy = 'download';
 		notice = null;
 		try {
 			const r = await encode();
 			if (!r) return;
+			void remember(r);
 			const url = URL.createObjectURL(r.blob);
 			const a = document.createElement('a');
 			a.href = url;
@@ -100,20 +122,11 @@
 		try {
 			const r = await encode();
 			if (!r) return;
-			const snapshot = $state.snapshot(recipe) as Recipe;
 			const agent = session.agent;
-			if (agent) {
-				await saveEmoji(agent, { name, alt: altOf(snapshot), blob: r.blob });
-				notice = { kind: 'ok', text: t('editor.savedPds', { name }), nagi: true };
-			} else {
-				const now = new Date().toISOString();
-				const id = editing?.kind === 'local' ? editing.id : newLocalId();
-				const createdAt = editing?.kind === 'local' ? editing.createdAt : now;
-				await putLocal({ id, name, recipe: snapshot, blob: r.blob, width: r.width, height: r.height, createdAt, updatedAt: now });
-				editing = { kind: 'local', id, createdAt };
-				void goto(`/?local=${id}`, { replaceState: true, keepFocus: true, noScroll: true });
-				notice = { kind: 'ok', text: t('editor.savedLocal') };
-			}
+			if (!agent) return;
+			const saved = await saveEmoji(agent, { name, alt: altOf($state.snapshot(recipe) as Recipe), blob: r.blob });
+			await remember(r, saved.rkey);
+			notice = { kind: 'ok', text: t('editor.savedPds', { name }), nagi: true };
 		} catch (e) {
 			notice = { kind: 'error', text: e instanceof Error ? e.message : String(e) };
 		} finally {
@@ -199,19 +212,21 @@
 			<span class="text-[12px] text-danger">{t('editor.nameInvalid')}</span>
 		{/if}
 		<div class="ml-auto flex items-center gap-2">
-			<button type="button" class="btn btn-secondary" onclick={download} disabled={busy !== null}>
+			<!-- 未ログインならダウンロードが主操作。ログイン中は PDS 保存が主操作 -->
+			<button
+				type="button"
+				class="btn {session.oauth ? 'btn-secondary' : 'btn-primary'}"
+				onclick={download}
+				disabled={busy !== null}
+			>
 				<Download size={16} strokeWidth={1.5} />
 				{busy === 'download' ? t('editor.exporting', { p: Math.round(progress * 100) }) : t('editor.download')}
 			</button>
-			<button type="button" class="btn btn-primary" onclick={save} disabled={busy !== null || !nameValid}>
-				{#if busy === 'save'}
-					{t('editor.saving', { p: Math.round(progress * 100) })}
-				{:else if session.oauth}
-					{t('editor.savePds')}
-				{:else}
-					{t('editor.saveLocal')}
-				{/if}
-			</button>
+			{#if session.oauth}
+				<button type="button" class="btn btn-primary" onclick={save} disabled={busy !== null || !nameValid}>
+					{busy === 'save' ? t('editor.saving', { p: Math.round(progress * 100) }) : t('editor.savePds')}
+				</button>
+			{/if}
 		</div>
 	</div>
 </div>

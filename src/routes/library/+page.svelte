@@ -190,7 +190,7 @@
 							</span>
 						</div>
 						<div class="flex items-center gap-1">
-							<a href="/?local={e.id}" class="btn btn-secondary btn-sm flex-1"><Pencil size={16} strokeWidth={1.5} />{t('library.edit')}</a>
+							<a href="/?local={e.id}" class="btn btn-secondary btn-sm flex-1"><Pencil size={16} strokeWidth={1.5} />{t('library.remake')}</a>
 							{#if session.oauth && !e.rkey}
 								<button
 									type="button"

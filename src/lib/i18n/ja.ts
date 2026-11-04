@@ -9,8 +9,6 @@ export const ja = {
 	'auth.login': 'ログイン',
 	'auth.logout': 'ログアウト',
 	'auth.title': 'PDSに保存する',
-	'auth.body':
-		'Bluesky などの AT Protocol アカウントでログインすると、作った絵文字をあなたの PDS に保存でき、Nagi でそのまま使えます。ログインしなくても作成・ダウンロード・ブラウザへの保存はできます。',
 	'auth.handle': 'ハンドル',
 	'auth.redirecting': '移動しています',
 	'auth.callbackLoading': 'ログインしています',
@@ -30,11 +28,9 @@ export const ja = {
 	'editor.exporting': '書き出し中 {p}%',
 	'editor.saving': '保存中 {p}%',
 	'editor.savePds': 'PDSに保存',
-	'editor.saveLocal': 'ブラウザに保存',
 	'editor.openNagi': 'Nagiを開く',
 	'editor.tooLarge': '{size}KB になり、上限の {max}KB を超えました。エフェクトを減らすか、長さを短くしてください',
 	'editor.savedPds': ':{name}: を PDS に保存しました。Nagi の絵文字から使えます',
-	'editor.savedLocal': 'このブラウザに保存しました。ログインすると PDS に移して Nagi で使えます',
 
 	'material.text': '文字',
 	'material.textPlaceholder': '改行で行を分けます',
@@ -71,19 +67,20 @@ export const ja = {
 	'library.pds': 'PDSの絵文字',
 	'library.loading': '読み込んでいます',
 	'library.loginHint':
-		'ログインすると、あなたの PDS にある Bluemoji 形式の絵文字を一覧・編集・削除できます。Nagi など他のアプリで作った絵文字も表示します',
+		'ログインすると、あなたの PDS にある Bluemoji 形式の絵文字を一覧・ダウンロード・削除できます。Nagi など他のアプリで作った絵文字も表示します',
 	'library.emptyBefore': 'まだ絵文字がありません。',
 	'library.emptyLink': '作る',
 	'library.emptyAfter': 'から始めましょう',
-	'library.edit': '編集',
 	'library.download': 'ダウンロード',
 	'library.delete': '削除',
 	'library.deletePdsNote': 'この絵文字を使った投稿やリアクションでも表示されなくなります',
 	'library.confirmDelete': '削除する',
 	'library.toPds': 'PDSに保存',
-	'library.local': 'このブラウザの絵文字',
-	'library.localNote': 'ブラウザのデータを消すと消えます',
-	'library.localEmpty': 'ログインせずに保存した絵文字がここに並びます',
+	'library.local': '作った履歴',
+	'library.localNote': 'ダウンロードや PDS への保存をした絵文字が、作り方ごとこのブラウザに残ります。ブラウザのデータを消すと消えます',
+	'library.localEmpty': 'ダウンロードや PDS への保存をすると、ここに並びます',
+	'auth.body': 'Bluesky などの AT Protocol アカウントでログインすると、作った絵文字をあなたの PDS に保存でき、Nagi でそのまま使えます。ログインしなくても作成とダウンロードはできます。',
+	'library.remake': '作り直す',
 	'library.inPds': 'PDS済み'
 } as const;
 
