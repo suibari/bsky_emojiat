@@ -1,0 +1,171 @@
+@import 'tailwindcss';
+
+/* 夜空の Ink ランプ。面はほぼ無彩色にとどめ、青は選択と主要な操作だけに使う。 */
+@theme {
+	--color-deep: #07080d;
+	--color-bg: #0b0d14;
+	--color-card: #11141c;
+	--color-raised: #1a1e28;
+	--color-line: rgb(238 240 245 / 0.08);
+	--color-line-strong: rgb(238 240 245 / 0.14);
+	--color-fg: #eef0f5;
+	--color-fg2: #a3a9b8;
+	--color-muted: #7a8296;
+	--color-accent: #1185fe;
+	--color-accent-ink: #0a64c8;
+	--color-accent-soft: rgb(17 133 254 / 0.14);
+	--color-danger: #e5484d;
+	--color-ok: #4cc38a;
+
+	--font-sans: 'Noto Sans JP', 'Hiragino Sans', system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+	background: var(--color-bg);
+	color: var(--color-fg);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+	color-scheme: dark;
+}
+
+body {
+	margin: 0;
+	min-height: 100dvh;
+	background: var(--color-bg);
+	font-size: 14px;
+	line-height: 20px;
+}
+
+:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+/* 透過の確認用チェッカー */
+.checker {
+	background-color: #161a23;
+	background-image:
+		linear-gradient(45deg, #1d222d 25%, transparent 25%),
+		linear-gradient(-45deg, #1d222d 25%, transparent 25%),
+		linear-gradient(45deg, transparent 75%, #1d222d 75%),
+		linear-gradient(-45deg, transparent 75%, #1d222d 75%);
+	background-size: 16px 16px;
+	background-position:
+		0 0,
+		0 8px,
+		8px -8px,
+		-8px 0;
+}
+
+input[type='range'] {
+	accent-color: var(--color-accent);
+}
+
+@layer components {
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 36px;
+	padding: 0 16px;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: 500;
+	white-space: nowrap;
+	transition:
+		background-color 150ms var(--ease-out),
+		border-color 150ms var(--ease-out),
+		color 150ms var(--ease-out),
+		transform 120ms var(--ease-out);
+}
+.btn:active:not(:disabled) {
+	transform: scale(0.98);
+}
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.btn-primary {
+	background: var(--color-accent-ink);
+	color: #fff;
+	box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+}
+.btn-primary:hover:not(:disabled) {
+	background: #0b72e3;
+}
+.btn-secondary {
+	background: var(--color-raised);
+	color: var(--color-fg);
+	border: 1px solid var(--color-line);
+}
+.btn-secondary:hover:not(:disabled) {
+	border-color: var(--color-line-strong);
+	background: #20252f;
+}
+.btn-ghost {
+	color: var(--color-fg2);
+}
+.btn-ghost:hover:not(:disabled) {
+	color: var(--color-fg);
+	background: var(--color-raised);
+}
+.btn-sm {
+	height: 32px;
+	padding: 0 12px;
+	font-size: 13px;
+}
+
+.field {
+	height: 36px;
+	padding: 0 12px;
+	border-radius: 8px;
+	background: var(--color-raised);
+	border: 1px solid var(--color-line);
+	color: var(--color-fg);
+	font-size: 14px;
+	transition: border-color 150ms var(--ease-out);
+}
+.field:focus {
+	outline: none;
+	border-color: var(--color-accent);
+}
+
+.panel-label {
+	font-size: 13px;
+	line-height: 20px;
+	font-weight: 500;
+	color: var(--color-fg2);
+}
+
+/* セグメント切替 */
+.seg {
+	display: inline-flex;
+	padding: 2px;
+	gap: 2px;
+	border-radius: 8px;
+	background: var(--color-deep);
+	border: 1px solid var(--color-line);
+}
+.seg > button {
+	height: 28px;
+	padding: 0 10px;
+	border-radius: 6px;
+	font-size: 13px;
+	color: var(--color-fg2);
+	transition:
+		background-color 150ms var(--ease-out),
+		color 150ms var(--ease-out);
+}
+.seg > button:hover {
+	color: var(--color-fg);
+}
+.seg > button[aria-pressed='true'] {
+	background: var(--color-raised);
+	color: var(--color-fg);
+	box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+}

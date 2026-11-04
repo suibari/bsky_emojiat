@@ -1,0 +1,36 @@
+{
+	"name": "bsky-emojiat",
+	"private": true,
+	"version": "0.0.1",
+	"license": "MIT",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@atproto/api": "^0.20.44",
+		"@atproto/oauth-client-browser": "^0.4.9",
+		"gifenc": "^1.0.3",
+		"lucide-svelte": "^1.0.1"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20261104.1",
+		"@sveltejs/adapter-cloudflare": "^7.2.9",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@tailwindcss/vite": "^4.3.0",
+		"@types/node": "^22.20.5",
+		"svelte": "^5.56.1",
+		"svelte-check": "^4.6.0",
+		"tailwindcss": "^4.3.0",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16",
+		"vitest": "4.1.9",
+		"wrangler": "^4.157.0"
+	}
+}
