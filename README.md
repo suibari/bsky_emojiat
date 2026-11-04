@@ -9,18 +9,24 @@
 - 静止画（PNG）とアニメーション（GIF）。エフェクトを重ねるとアニメになります（6カテゴリ・25種）
 - 横長（1:1 / 2:1 / 3:1 / 4:1、高さ 128px 固定）
 - ログインなしでダウンロード・ブラウザ（IndexedDB）への保存
-- AT Protocol でログインすると PDS に保存・一覧・編集・削除
+- AT Protocol でログインすると PDS に保存・一覧・削除（PDS の絵文字は編集しない。下記）
 - 日本語・英語表示（ヘッダーの言語セレクタで切り替え。初回はブラウザの言語に合わせ、選んだ言語はブラウザに記憶）
 
 ## 保存形式
 
 PDS には [Bluemoji](https://github.com/aendra-rininsland/bluemoji) 形式の `blue.moji.collection.item` で保存します。
 Nagi と同じ形式なので、保存した絵文字はそのまま Nagi の絵文字ピッカーに出ます。
+画像は `formats_v0` の `png_128`（静止画）または `gif_128`（アニメ）に、256KB 以下の blob として入れます。
 
-| コレクション | 中身 |
-| --- | --- |
-| `blue.moji.collection.item` | 絵文字本体。`formats_v0` の `png_128` または `gif_128` に画像 blob（256KB 以下） |
-| `com.suibari.emojiat.recipe` | 同じ rkey のサイドカー。編集用のレシピ（文字・書体・色・エフェクト） |
+### PDS の絵文字を編集しない理由
+
+Nagi は投稿本文やリアクションで、絵文字をレコードの URI だけでなく **CID** まで固定して参照します
+（本文には公式の `blue.moji.richtext.facet` 用に画像 blob の CID も入ります）。Nagi の AppView は
+CID が現在のレコードと一致しないと画像を返しません（404）。同じ rkey に上書きすると、その絵文字を使った
+過去の投稿から絵文字が消えるため、PDS への保存は常に新規作成とし、上書きはしません。
+OAuth でも `repo:blue.moji.collection.item?action=create&action=delete` だけを求めます。
+
+作り方の設定（レシピ）は PDS に保存しません。ブラウザに保存した絵文字は、どこからも参照されないので何度でも編集できます。
 
 ## 開発
 

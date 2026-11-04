@@ -1,9 +1,9 @@
 import type { BrowserOAuthClient } from '@atproto/oauth-client-browser';
 
+// 絵文字は作成と削除だけ（上書きすると Nagi の過去の投稿から参照が切れるため update は求めない）
 export const OAUTH_SCOPE = [
 	'atproto',
-	'repo:blue.moji.collection.item',
-	'repo:com.suibari.emojiat.recipe',
+	'repo:blue.moji.collection.item?action=create&action=delete',
 	'blob:image/*'
 ].join(' ');
 

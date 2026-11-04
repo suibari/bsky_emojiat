@@ -10,12 +10,13 @@
 	import ChatMock from '$lib/components/ChatMock.svelte';
 	import { defaultRecipe, emojiSize, isAnimated, normalizeRecipe, type Recipe } from '$lib/render/recipe';
 	import { MAX_EMOJI_BYTES, encodeEmoji, type Encoded } from '$lib/render/encode';
-	import { EMOJI_NAME_PATTERN, displayName, getEmoji, saveEmoji } from '$lib/atproto/bluemoji';
+	import { EMOJI_NAME_PATTERN, altOf, saveEmoji } from '$lib/atproto/bluemoji';
 	import { session } from '$lib/atproto/session.svelte';
 	import { getLocal, newLocalId, putLocal } from '$lib/store/local';
 	import { NAGI_URL } from '$lib/nagi';
 
-	type Editing = { kind: 'local'; id: string; createdAt: string } | { kind: 'pds'; rkey: string } | null;
+	// 編集できるのはブラウザ保存の絵文字だけ。PDS の絵文字は Nagi の投稿から CID で参照されるので上書きしない
+	type Editing = { kind: 'local'; id: string; createdAt: string } | null;
 
 	const defaultName = () => {
 		const d = new Date();
@@ -50,22 +51,6 @@
 				editing = { kind: 'local', id: item.id, createdAt: item.createdAt };
 			}
 		}
-	});
-
-	// PDS の絵文字を編集する場合はログインの復元を待ってから読む
-	$effect(() => {
-		const rkey = page.url.searchParams.get('rkey');
-		const agent = session.agent;
-		if (!rkey || !agent) return;
-		void getEmoji(agent, rkey).then((e) => {
-			if (!e?.recipe) {
-				notice = { kind: 'error', text: t('editor.notEditable') };
-				return;
-			}
-			recipe = e.recipe;
-			name = displayName(e.name);
-			editing = { kind: 'pds', rkey };
-		});
 	});
 
 	function startNew() {
@@ -118,10 +103,7 @@
 			const snapshot = $state.snapshot(recipe) as Recipe;
 			const agent = session.agent;
 			if (agent) {
-				const rkey = editing?.kind === 'pds' ? editing.rkey : undefined;
-				const saved = await saveEmoji(agent, { name, recipe: snapshot, blob: r.blob, rkey });
-				editing = { kind: 'pds', rkey: saved.rkey };
-				void goto(`/?rkey=${saved.rkey}`, { replaceState: true, keepFocus: true, noScroll: true });
+				await saveEmoji(agent, { name, alt: altOf(snapshot), blob: r.blob });
 				notice = { kind: 'ok', text: t('editor.savedPds', { name }), nagi: true };
 			} else {
 				const now = new Date().toISOString();
@@ -225,7 +207,7 @@
 				{#if busy === 'save'}
 					{t('editor.saving', { p: Math.round(progress * 100) })}
 				{:else if session.oauth}
-					{editing?.kind === 'pds' ? t('editor.overwritePds') : t('editor.savePds')}
+					{t('editor.savePds')}
 				{:else}
 					{t('editor.saveLocal')}
 				{/if}

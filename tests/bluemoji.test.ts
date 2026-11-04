@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BLUEMOJI_ITEM, EMOJIAT_RECIPE, altOf, blobInfo, buildItemRecord, buildRecipeRecord, createRkey } from '../src/lib/atproto/bluemoji';
+import { BLUEMOJI_ITEM, altOf, blobInfo, buildItemRecord, createRkey } from '../src/lib/atproto/bluemoji';
 import { defaultRecipe, normalizeRecipe } from '../src/lib/render/recipe';
 
 const blob = { $type: 'blob', ref: { $link: 'bafkreiexample' }, mimeType: 'image/gif', size: 1234 };
@@ -25,14 +25,6 @@ describe('buildItemRecord', () => {
 		expect(Object.keys(rec.formats)).toContain('png_128');
 		expect('alt' in rec).toBe(false);
 		expect(() => buildItemRecord({ name: 'a', alt: '', blob, mimeType: 'image/jpeg', createdAt: 'x' })).toThrow();
-	});
-});
-
-describe('buildRecipeRecord', () => {
-	it('points at the bluemoji item with the same rkey', () => {
-		const rec = buildRecipeRecord('did:plc:abc', 'emojiat_1', defaultRecipe(), 't');
-		expect(rec.$type).toBe(EMOJIAT_RECIPE);
-		expect(rec.subject).toBe(`at://did:plc:abc/${BLUEMOJI_ITEM}/emojiat_1`);
 	});
 });
 

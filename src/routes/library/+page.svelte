@@ -2,7 +2,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { onMount } from 'svelte';
 	import { ArrowUpRight, Download, Pencil, Trash2, Upload } from 'lucide-svelte';
-	import { deleteEmoji, displayName, listEmojis, saveEmoji, type PdsEmoji } from '$lib/atproto/bluemoji';
+	import { altOf, deleteEmoji, displayName, listEmojis, saveEmoji, type PdsEmoji } from '$lib/atproto/bluemoji';
 	import { session } from '$lib/atproto/session.svelte';
 	import { deleteLocal, listLocal, putLocal, type LocalEmoji } from '$lib/store/local';
 	import { NAGI_URL } from '$lib/nagi';
@@ -89,12 +89,7 @@
 		if (!agent) return;
 		working = item.id;
 		try {
-			const saved = await saveEmoji(agent, {
-				name: item.name,
-				recipe: item.recipe,
-				blob: item.blob,
-				rkey: item.rkey
-			});
+			const saved = await saveEmoji(agent, { name: item.name, alt: altOf(item.recipe), blob: item.blob });
 			await putLocal({ ...$state.snapshot(item), rkey: saved.rkey } as LocalEmoji);
 			await Promise.all([loadLocal(), loadPds()]);
 		} catch (e) {
@@ -146,12 +141,9 @@
 							</div>
 							<div class="flex min-w-0 flex-col">
 								<span class="truncate font-mono text-[13px]">{e.name}</span>
-								<span class="text-[12px] text-muted">{e.recipe ? t('library.madeHere') : t('library.madeElsewhere')}</span>
+								<span class="font-mono text-[12px] text-muted">{e.mimeType.replace('image/', '').toUpperCase()}</span>
 							</div>
 							<div class="flex items-center gap-1">
-								{#if e.recipe}
-									<a href="/?rkey={e.rkey}" class="btn btn-secondary btn-sm flex-1"><Pencil size={16} strokeWidth={1.5} />{t('library.edit')}</a>
-								{/if}
 								<button type="button" class="btn btn-ghost btn-sm px-2" aria-label={t('library.download')} onclick={() => downloadPds(e)}>
 									<Download size={16} strokeWidth={1.5} />
 								</button>
@@ -165,6 +157,9 @@
 									</button>
 								{/if}
 							</div>
+							{#if confirming === e.rkey}
+								<p class="text-[12px] leading-4 text-muted">{t('library.deletePdsNote')}</p>
+							{/if}
 						</li>
 					{/each}
 				</ul>
@@ -196,7 +191,7 @@
 						</div>
 						<div class="flex items-center gap-1">
 							<a href="/?local={e.id}" class="btn btn-secondary btn-sm flex-1"><Pencil size={16} strokeWidth={1.5} />{t('library.edit')}</a>
-							{#if session.oauth}
+							{#if session.oauth && !e.rkey}
 								<button
 									type="button"
 									class="btn btn-ghost btn-sm px-2"

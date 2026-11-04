@@ -1,14 +1,13 @@
 import type { Agent } from '@atproto/api';
-import { normalizeRecipe, type Recipe } from '$lib/render/recipe';
+import type { Recipe } from '$lib/render/recipe';
 
 /**
  * Nagi と同じ Bluemoji 形式（blue.moji.collection.item）で保存する。
  * 書式は nagi_client/src/lib/atproto/bluemoji.ts の createBluemojiItem に合わせてあり、
  * ここで作った絵文字はそのまま Nagi の絵文字ピッカーに出る。
+ * 作り方の設定（レシピ）は PDS に置かない。PDS の絵文字は作成と削除だけで、編集はしない。
  */
 export const BLUEMOJI_ITEM = 'blue.moji.collection.item';
-/** 編集用にレシピを置くサイドカー。本体と同じ rkey を使う。 */
-export const EMOJIAT_RECIPE = 'com.suibari.emojiat.recipe';
 const FORMATS_V0 = `${BLUEMOJI_ITEM}#formats_v0`;
 export const EMOJI_NAME_PATTERN = /^[a-zA-Z0-9_-]{1,32}$/;
 
@@ -25,7 +24,6 @@ export type PdsEmoji = {
 	alt?: string;
 	url: string;
 	mimeType: string;
-	recipe?: Recipe;
 	createdAt: string;
 };
 
@@ -70,15 +68,6 @@ export function buildItemRecord(input: {
 	};
 }
 
-export function buildRecipeRecord(did: string, rkey: string, recipe: Recipe, createdAt: string) {
-	return {
-		$type: EMOJIAT_RECIPE,
-		subject: `at://${did}/${BLUEMOJI_ITEM}/${rkey}`,
-		recipe,
-		createdAt
-	};
-}
-
 export const altOf = (recipe: Recipe) => recipe.text.replace(/\s+/g, ' ').trim().slice(0, 100);
 
 async function pdsUrl(agent: Agent) {
@@ -89,41 +78,27 @@ async function pdsUrl(agent: Agent) {
 	return info.aud.replace(/\/$/, '');
 }
 
-/** 新規保存（mode=create）と、既存 rkey の上書き（mode=update）。 */
-export async function saveEmoji(
-	agent: Agent,
-	opts: { name: string; recipe: Recipe; blob: Blob; rkey?: string; createdAt?: string }
-) {
+/**
+ * PDS への保存は常に新規作成。Nagi は投稿やリアクションで絵文字をレコードの CID（と画像 blob の CID）
+ * まで固定して参照するため、同じ rkey に上書きすると過去の投稿の絵文字が表示できなくなる。
+ */
+export async function saveEmoji(agent: Agent, opts: { name: string; alt: string; blob: Blob }) {
 	const did = agent.assertDid;
 	const uploaded = await agent.com.atproto.repo.uploadBlob(opts.blob, { encoding: opts.blob.type });
-	const now = new Date().toISOString();
-	const rkey = opts.rkey ?? createRkey();
-	const createdAt = opts.createdAt ?? now;
+	const rkey = createRkey();
 	const item = buildItemRecord({
 		name: opts.name,
-		alt: altOf(opts.recipe),
+		alt: opts.alt,
 		blob: uploaded.data.blob,
 		mimeType: opts.blob.type,
-		createdAt
+		createdAt: new Date().toISOString()
 	});
-	const recipe = buildRecipeRecord(did, rkey, opts.recipe, createdAt);
-	const op = opts.rkey ? 'com.atproto.repo.applyWrites#update' : 'com.atproto.repo.applyWrites#create';
-	let recipeOp = op;
-	if (opts.rkey) {
-		// 他アプリ製の絵文字を初めて編集する場合など、サイドカーがまだ無いこともある
-		try {
-			await agent.com.atproto.repo.getRecord({ repo: did, collection: EMOJIAT_RECIPE, rkey });
-		} catch {
-			recipeOp = 'com.atproto.repo.applyWrites#create';
-		}
-	}
-	await agent.com.atproto.repo.applyWrites({
+	await agent.com.atproto.repo.createRecord({
 		repo: did,
-		validate: false,
-		writes: [
-			{ $type: op, collection: BLUEMOJI_ITEM, rkey, value: item },
-			{ $type: recipeOp, collection: EMOJIAT_RECIPE, rkey, value: recipe }
-		] as never
+		collection: BLUEMOJI_ITEM,
+		rkey,
+		record: item,
+		validate: false
 	});
 	return { rkey, uri: `at://${did}/${BLUEMOJI_ITEM}/${rkey}` };
 }
@@ -148,12 +123,7 @@ const rkeyOf = (uri: string) => uri.slice(uri.lastIndexOf('/') + 1);
 
 export async function listEmojis(agent: Agent): Promise<PdsEmoji[]> {
 	const did = agent.assertDid;
-	const [pds, items, recipes] = await Promise.all([
-		pdsUrl(agent),
-		listAll(agent, BLUEMOJI_ITEM),
-		listAll(agent, EMOJIAT_RECIPE)
-	]);
-	const recipeByRkey = new Map(recipes.map((r) => [rkeyOf(r.uri), r.value.recipe]));
+	const [pds, items] = await Promise.all([pdsUrl(agent), listAll(agent, BLUEMOJI_ITEM)]);
 	const out: PdsEmoji[] = [];
 	for (const record of items) {
 		const v = record.value as {
@@ -169,24 +139,17 @@ export async function listEmojis(agent: Agent): Promise<PdsEmoji[]> {
 			if (media) break;
 		}
 		if (!media) continue;
-		const rkey = rkeyOf(record.uri);
-		const rawRecipe = recipeByRkey.get(rkey);
 		out.push({
-			rkey,
+			rkey: rkeyOf(record.uri),
 			uri: record.uri,
 			name: v.name,
 			alt: typeof v.alt === 'string' ? v.alt : undefined,
 			url: `${pds}/xrpc/com.atproto.sync.getBlob?${new URLSearchParams({ did, cid: media.cid })}`,
 			mimeType: media.mimeType,
-			recipe: rawRecipe ? normalizeRecipe(rawRecipe) : undefined,
 			createdAt: typeof v.createdAt === 'string' ? v.createdAt : ''
 		});
 	}
 	return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export async function getEmoji(agent: Agent, rkey: string) {
-	return (await listEmojis(agent)).find((e) => e.rkey === rkey);
 }
 
 const isNotFound = (e: unknown) =>
@@ -194,12 +157,9 @@ const isNotFound = (e: unknown) =>
 	String((e as { message?: string })?.message ?? '').includes('RecordNotFound');
 
 export async function deleteEmoji(agent: Agent, rkey: string) {
-	const repo = agent.assertDid;
-	for (const collection of [BLUEMOJI_ITEM, EMOJIAT_RECIPE]) {
-		try {
-			await agent.com.atproto.repo.deleteRecord({ repo, collection, rkey });
-		} catch (e) {
-			if (!isNotFound(e)) throw e;
-		}
+	try {
+		await agent.com.atproto.repo.deleteRecord({ repo: agent.assertDid, collection: BLUEMOJI_ITEM, rkey });
+	} catch (e) {
+		if (!isNotFound(e)) throw e;
 	}
 }
