@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/index.svelte';
 	import { onMount } from 'svelte';
 	import { ArrowUpRight, Download, Pencil, Trash2, Upload } from 'lucide-svelte';
 	import { deleteEmoji, displayName, listEmojis, saveEmoji, type PdsEmoji } from '$lib/atproto/bluemoji';
@@ -105,36 +106,36 @@
 	}
 </script>
 
-<svelte:head><title>マイ絵文字 · えもじあっと</title></svelte:head>
+<svelte:head><title>{t('library.title')} · {t('app.name')}</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-12 px-4 py-8 md:px-6">
 	<section class="flex flex-col gap-4">
 		<div class="flex flex-wrap items-baseline justify-between gap-2">
 			<h1 class="flex items-baseline gap-2 text-[20px] font-medium">
-				PDSの絵文字
+				{t('library.pds')}
 				{#if pds.length}<span class="font-mono text-[13px] font-normal text-muted">{pds.length}</span>{/if}
 			</h1>
 			{#if session.oauth}
 				<a href={NAGI_URL} target="_blank" rel="noopener" class="flex items-center gap-1 text-[13px] text-fg2 hover:text-fg">
-					Nagiで使う <ArrowUpRight size={16} strokeWidth={1.5} />
+					{t('nav.useInNagi')} <ArrowUpRight size={16} strokeWidth={1.5} />
 				</a>
 			{/if}
 		</div>
 		{#if !session.ready}
-			<p class="text-[13px] text-muted">読み込んでいます</p>
+			<p class="text-[13px] text-muted">{t('library.loading')}</p>
 		{:else if !session.oauth}
 			<p class="rounded-xl border border-dashed border-line px-4 py-6 text-[13px] leading-5 text-fg2">
-				ログインすると、あなたの PDS にある Bluemoji 形式の絵文字を一覧・編集・削除できます。Nagi など他のアプリで作った絵文字も表示します
+				{t('library.loginHint')}
 			</p>
 		{:else}
 			{#if pdsState === 'error'}
 				<p class="text-[13px] text-danger">{pdsError}</p>
 			{/if}
 			{#if pdsState === 'loading' && pds.length === 0}
-				<p class="text-[13px] text-muted">読み込んでいます</p>
+				<p class="text-[13px] text-muted">{t('library.loading')}</p>
 			{:else if pds.length === 0}
 				<p class="rounded-xl border border-dashed border-line px-4 py-6 text-[13px] text-fg2">
-					まだ絵文字がありません。<a href="/" class="text-accent hover:underline">作る</a>から始めましょう
+					{t('library.emptyBefore')}<a href="/" class="text-accent hover:underline">{t('library.emptyLink')}</a>{t('library.emptyAfter')}
 				</p>
 			{:else}
 				<ul class="grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-3">
@@ -145,21 +146,21 @@
 							</div>
 							<div class="flex min-w-0 flex-col">
 								<span class="truncate font-mono text-[13px]">{e.name}</span>
-								<span class="text-[12px] text-muted">{e.recipe ? 'えもじあっと' : 'ほかのアプリ'}</span>
+								<span class="text-[12px] text-muted">{e.recipe ? t('library.madeHere') : t('library.madeElsewhere')}</span>
 							</div>
 							<div class="flex items-center gap-1">
 								{#if e.recipe}
-									<a href="/?rkey={e.rkey}" class="btn btn-secondary btn-sm flex-1"><Pencil size={16} strokeWidth={1.5} />編集</a>
+									<a href="/?rkey={e.rkey}" class="btn btn-secondary btn-sm flex-1"><Pencil size={16} strokeWidth={1.5} />{t('library.edit')}</a>
 								{/if}
-								<button type="button" class="btn btn-ghost btn-sm px-2" aria-label="ダウンロード" onclick={() => downloadPds(e)}>
+								<button type="button" class="btn btn-ghost btn-sm px-2" aria-label={t('library.download')} onclick={() => downloadPds(e)}>
 									<Download size={16} strokeWidth={1.5} />
 								</button>
 								{#if confirming === e.rkey}
 									<button type="button" class="btn btn-sm bg-danger/15 px-2 text-danger" disabled={working === e.rkey} onclick={() => removePds(e.rkey)}>
-										削除する
+										{t('library.confirmDelete')}
 									</button>
 								{:else}
-									<button type="button" class="btn btn-ghost btn-sm px-2" aria-label="削除" onclick={() => (confirming = e.rkey)}>
+									<button type="button" class="btn btn-ghost btn-sm px-2" aria-label={t('library.delete')} onclick={() => (confirming = e.rkey)}>
 										<Trash2 size={16} strokeWidth={1.5} />
 									</button>
 								{/if}
@@ -173,12 +174,12 @@
 
 	<section class="flex flex-col gap-4">
 		<div class="flex flex-col gap-1">
-			<h2 class="text-[20px] font-medium">このブラウザの絵文字</h2>
-			<p class="text-[13px] text-muted">ブラウザのデータを消すと消えます</p>
+			<h2 class="text-[20px] font-medium">{t('library.local')}</h2>
+			<p class="text-[13px] text-muted">{t('library.localNote')}</p>
 		</div>
 		{#if local.length === 0}
 			<p class="rounded-xl border border-dashed border-line px-4 py-6 text-[13px] text-fg2">
-				ログインせずに保存した絵文字がここに並びます
+				{t('library.localEmpty')}
 			</p>
 		{:else}
 			<ul class="grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-3">
@@ -190,17 +191,17 @@
 						<div class="flex min-w-0 flex-col">
 							<span class="truncate font-mono text-[13px]">:{e.name}:</span>
 							<span class="font-mono text-[12px] text-muted">
-								{e.blob.type === 'image/gif' ? 'GIF' : 'PNG'} · {Math.round(e.blob.size / 1024)}KB{e.rkey ? ' · PDS済み' : ''}
+								{e.blob.type === 'image/gif' ? 'GIF' : 'PNG'} · {Math.round(e.blob.size / 1024)}KB{e.rkey ? ` · ${t('library.inPds')}` : ''}
 							</span>
 						</div>
 						<div class="flex items-center gap-1">
-							<a href="/?local={e.id}" class="btn btn-secondary btn-sm flex-1"><Pencil size={16} strokeWidth={1.5} />編集</a>
+							<a href="/?local={e.id}" class="btn btn-secondary btn-sm flex-1"><Pencil size={16} strokeWidth={1.5} />{t('library.edit')}</a>
 							{#if session.oauth}
 								<button
 									type="button"
 									class="btn btn-ghost btn-sm px-2"
-									aria-label="PDSに保存"
-									title="PDSに保存"
+									aria-label={t('library.toPds')}
+									title={t('library.toPds')}
 									disabled={working === e.id}
 									onclick={() => moveToPds(e)}
 								>
@@ -210,17 +211,17 @@
 							<button
 								type="button"
 								class="btn btn-ghost btn-sm px-2"
-								aria-label="ダウンロード"
+								aria-label={t('library.download')}
 								onclick={() => downloadBlob(e.url, `${e.name}.${e.blob.type === 'image/gif' ? 'gif' : 'png'}`)}
 							>
 								<Download size={16} strokeWidth={1.5} />
 							</button>
 							{#if confirming === e.id}
 								<button type="button" class="btn btn-sm bg-danger/15 px-2 text-danger" disabled={working === e.id} onclick={() => removeLocal(e.id)}>
-									削除する
+									{t('library.confirmDelete')}
 								</button>
 							{:else}
-								<button type="button" class="btn btn-ghost btn-sm px-2" aria-label="削除" onclick={() => (confirming = e.id)}>
+								<button type="button" class="btn btn-ghost btn-sm px-2" aria-label={t('library.delete')} onclick={() => (confirming = e.id)}>
 									<Trash2 size={16} strokeWidth={1.5} />
 								</button>
 							{/if}

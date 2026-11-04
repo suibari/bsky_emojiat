@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/index.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -58,7 +59,7 @@
 		if (!rkey || !agent) return;
 		void getEmoji(agent, rkey).then((e) => {
 			if (!e?.recipe) {
-				notice = { kind: 'error', text: 'この絵文字はえもじあっとで作られていないため、編集できません' };
+				notice = { kind: 'error', text: t('editor.notEditable') };
 				return;
 			}
 			recipe = e.recipe;
@@ -81,7 +82,7 @@
 		if (result.tooLarge) {
 			notice = {
 				kind: 'error',
-				text: `${Math.round(result.blob.size / 1024)}KB になり、上限の ${MAX_EMOJI_BYTES / 1024}KB を超えました。エフェクトを減らすか、長さを短くしてください`
+				text: t('editor.tooLarge', { size: Math.round(result.blob.size / 1024), max: MAX_EMOJI_BYTES / 1024 })
 			};
 			return null;
 		}
@@ -121,7 +122,7 @@
 				const saved = await saveEmoji(agent, { name, recipe: snapshot, blob: r.blob, rkey });
 				editing = { kind: 'pds', rkey: saved.rkey };
 				void goto(`/?rkey=${saved.rkey}`, { replaceState: true, keepFocus: true, noScroll: true });
-				notice = { kind: 'ok', text: `:${name}: を PDS に保存しました。Nagi の絵文字から使えます`, nagi: true };
+				notice = { kind: 'ok', text: t('editor.savedPds', { name }), nagi: true };
 			} else {
 				const now = new Date().toISOString();
 				const id = editing?.kind === 'local' ? editing.id : newLocalId();
@@ -129,7 +130,7 @@
 				await putLocal({ id, name, recipe: snapshot, blob: r.blob, width: r.width, height: r.height, createdAt, updatedAt: now });
 				editing = { kind: 'local', id, createdAt };
 				void goto(`/?local=${id}`, { replaceState: true, keepFocus: true, noScroll: true });
-				notice = { kind: 'ok', text: 'このブラウザに保存しました。ログインすると PDS に移して Nagi で使えます' };
+				notice = { kind: 'ok', text: t('editor.savedLocal') };
 			}
 		} catch (e) {
 			notice = { kind: 'error', text: e instanceof Error ? e.message : String(e) };
@@ -141,13 +142,13 @@
 
 <div class="mx-auto grid w-full max-w-[1600px] flex-1 gap-4 p-4 md:p-6 lg:grid-cols-[320px_minmax(0,1fr)_340px] lg:gap-6">
 	<!-- プレビュー（スマホでは先頭） -->
-	<section class="flex flex-col gap-4 lg:order-2" aria-label="プレビュー">
+	<section class="flex flex-col gap-4 lg:order-2" aria-label={t('editor.preview')}>
 		<div class="flex items-center justify-between">
 			<h1 class="text-[16px] font-medium">
-				{editing ? '絵文字を編集' : '新しい絵文字'}
+				{editing ? t('editor.edit') : t('editor.new')}
 			</h1>
 			{#if editing}
-				<button type="button" class="btn btn-ghost btn-sm" onclick={startNew}>新しく作る</button>
+				<button type="button" class="btn btn-ghost btn-sm" onclick={startNew}>{t('editor.startNew')}</button>
 			{/if}
 		</div>
 		<div
@@ -158,29 +159,29 @@
 		</div>
 		<div class="flex items-center justify-between font-mono text-[12px] text-muted">
 			<span>{animated ? 'GIF' : 'PNG'} · {size.width}×{size.height}</span>
-			<span>上限 {MAX_EMOJI_BYTES / 1024}KB</span>
+			<span>{t('editor.limit', { kb: MAX_EMOJI_BYTES / 1024 })}</span>
 		</div>
 		<ChatMock {recipe} name={nameValid ? name : 'emoji'} />
 	</section>
 
 	<!-- スマホ用の切替 -->
-	<div class="seg w-full lg:hidden" role="group" aria-label="編集する項目">
-		<button type="button" class="flex-1" aria-pressed={tab === 'material'} onclick={() => (tab = 'material')}>文字と色</button>
+	<div class="seg w-full lg:hidden" role="group" aria-label={t('editor.tabMaterial')}>
+		<button type="button" class="flex-1" aria-pressed={tab === 'material'} onclick={() => (tab = 'material')}>{t('editor.tabMaterial')}</button>
 		<button type="button" class="flex-1" aria-pressed={tab === 'effect'} onclick={() => (tab = 'effect')}>
-			エフェクト{recipe.effects.length ? ` ${recipe.effects.length}` : ''}
+			{t('editor.tabEffect')}{recipe.effects.length ? ` ${recipe.effects.length}` : ''}
 		</button>
 	</div>
 
 	<section
 		class="rounded-2xl border border-line bg-card p-4 lg:order-1 lg:block lg:max-h-[calc(100dvh-56px-48px-72px)] lg:overflow-y-auto {tab === 'material' ? '' : 'hidden'}"
-		aria-label="文字と色"
+		aria-label={t('editor.tabMaterial')}
 	>
 		<MaterialPanel bind:recipe />
 	</section>
 
 	<section
 		class="rounded-2xl border border-line bg-card p-4 lg:order-3 lg:block lg:max-h-[calc(100dvh-56px-48px-72px)] lg:overflow-y-auto {tab === 'effect' ? '' : 'hidden'}"
-		aria-label="エフェクト"
+		aria-label={t('editor.tabEffect')}
 	>
 		<EffectPanel bind:recipe />
 	</section>
@@ -194,7 +195,7 @@
 			<p class="flex-1 text-[13px] text-fg2">{notice.text}</p>
 			{#if notice.nagi}
 				<a href={NAGI_URL} target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
-					Nagiを開く <ArrowUpRight size={16} strokeWidth={1.5} />
+					{t('editor.openNagi')} <ArrowUpRight size={16} strokeWidth={1.5} />
 				</a>
 			{/if}
 		</div>
@@ -207,26 +208,26 @@
 				maxlength="32"
 				autocomplete="off"
 				spellcheck="false"
-				aria-label="絵文字の名前（英数字・_・-）"
+				aria-label={t('editor.nameLabel')}
 				class="h-full min-w-[8ch] flex-1 bg-transparent px-1 outline-none [field-sizing:content] sm:flex-none"
 			/>
 			<span class="pr-3 text-muted">:</span>
 		</label>
 		{#if !nameValid}
-			<span class="text-[12px] text-danger">名前は英数字と _ - で32文字まで</span>
+			<span class="text-[12px] text-danger">{t('editor.nameInvalid')}</span>
 		{/if}
 		<div class="ml-auto flex items-center gap-2">
 			<button type="button" class="btn btn-secondary" onclick={download} disabled={busy !== null}>
 				<Download size={16} strokeWidth={1.5} />
-				{busy === 'download' ? `書き出し中 ${Math.round(progress * 100)}%` : 'ダウンロード'}
+				{busy === 'download' ? t('editor.exporting', { p: Math.round(progress * 100) }) : t('editor.download')}
 			</button>
 			<button type="button" class="btn btn-primary" onclick={save} disabled={busy !== null || !nameValid}>
 				{#if busy === 'save'}
-					保存中 {Math.round(progress * 100)}%
+					{t('editor.saving', { p: Math.round(progress * 100) })}
 				{:else if session.oauth}
-					{editing?.kind === 'pds' ? 'PDSに上書き' : 'PDSに保存'}
+					{editing?.kind === 'pds' ? t('editor.overwritePds') : t('editor.savePds')}
 				{:else}
-					ブラウザに保存
+					{t('editor.saveLocal')}
 				{/if}
 			</button>
 		</div>

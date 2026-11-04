@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { localized, t } from '$lib/i18n/index.svelte';
 	import { FONTS } from '$lib/render/fonts';
 	import { ASPECTS, GRADIENTS, SOLID_COLORS, type Recipe } from '$lib/render/recipe';
 
@@ -13,7 +14,7 @@
 
 <div class="flex flex-col gap-6">
 	<label class="flex flex-col gap-2">
-		<span class="panel-label">文字</span>
+		<span class="panel-label">{t('material.text')}</span>
 		<textarea
 			bind:value={recipe.text}
 			rows="3"
@@ -22,15 +23,15 @@
 			spellcheck="false"
 			class="field resize-none py-2 leading-6"
 			style="height:auto"
-			placeholder="改行で行を分けます"
+			placeholder={t('material.textPlaceholder')}
 		></textarea>
-		<span class="text-[12px] leading-4 text-muted">改行した位置で行が分かれます。短い行ほど大きく見えます</span>
+		<span class="text-[12px] leading-4 text-muted">{t('material.textHint')}</span>
 	</label>
 
 	<section class="flex flex-col gap-2">
 		<div class="flex items-center justify-between">
-			<span class="panel-label">横長</span>
-			<div class="seg" role="group" aria-label="横幅">
+			<span class="panel-label">{t('material.aspect')}</span>
+			<div class="seg" role="group" aria-label={t('material.aspect')}>
 				{#each ASPECTS as a (a)}
 					<button type="button" aria-pressed={recipe.aspect === a} onclick={() => (recipe.aspect = a)}>
 						{a}:1
@@ -41,7 +42,7 @@
 	</section>
 
 	<section class="flex flex-col gap-2">
-		<span class="panel-label">書体</span>
+		<span class="panel-label">{t('material.font')}</span>
 		<div class="grid grid-cols-3 gap-2">
 			{#each FONTS as f (f.id)}
 				<button
@@ -52,7 +53,7 @@
 						{recipe.font === f.id ? 'border-accent bg-accent-soft' : 'border-line'}"
 				>
 					<span class="text-[22px] leading-7 text-fg" style="font-family:'{f.family}';font-weight:{f.weight}">{sample}</span>
-					<span class="text-[11px] leading-4 text-muted">{f.label}</span>
+					<span class="text-[11px] leading-4 text-muted">{localized(f)}</span>
 				</button>
 			{/each}
 		</div>
@@ -60,17 +61,17 @@
 
 	<section class="flex flex-col gap-3">
 		<div class="flex items-center justify-between">
-			<span class="panel-label">文字の色</span>
-			<div class="seg" role="group" aria-label="塗り方">
+			<span class="panel-label">{t('material.color')}</span>
+			<div class="seg" role="group" aria-label={t('material.color')}>
 				<button
 					type="button"
 					aria-pressed={recipe.fill.kind === 'solid'}
-					onclick={() => (recipe.fill = { kind: 'solid', color: SOLID_COLORS[0] })}>単色</button
+					onclick={() => (recipe.fill = { kind: 'solid', color: SOLID_COLORS[0] })}>{t('material.solid')}</button
 				>
 				<button
 					type="button"
 					aria-pressed={recipe.fill.kind === 'gradient'}
-					onclick={() => (recipe.fill = { kind: 'gradient', stops: GRADIENTS[0].stops })}>グラデーション</button
+					onclick={() => (recipe.fill = { kind: 'gradient', stops: GRADIENTS[0].stops })}>{t('material.gradient')}</button
 				>
 			</div>
 		</div>
@@ -87,7 +88,7 @@
 						style="background:{c}"
 					></button>
 				{/each}
-				<label class="relative size-7 overflow-hidden rounded-md border border-dashed border-line-strong" title="ほかの色">
+				<label class="relative size-7 overflow-hidden rounded-md border border-dashed border-line-strong" title={t('material.customColor')}>
 					<input
 						type="color"
 						value={current}
@@ -112,7 +113,7 @@
 							class="h-7 w-full rounded-md border border-line-strong {active ? 'outline-2 outline-offset-2 outline-accent' : ''}"
 							style="background:linear-gradient(180deg,{g.stops.join(',')})"
 						></span>
-						<span class="text-[11px] leading-4 text-muted">{g.label}</span>
+						<span class="text-[11px] leading-4 text-muted">{localized(g)}</span>
 					</button>
 				{/each}
 			</div>
@@ -121,7 +122,7 @@
 
 	<section class="flex flex-col gap-3">
 		<label class="flex items-center justify-between">
-			<span class="panel-label">縁取り</span>
+			<span class="panel-label">{t('material.stroke')}</span>
 			<input type="checkbox" bind:checked={recipe.stroke.enabled} class="size-4 accent-accent" />
 		</label>
 		{#if recipe.stroke.enabled}
@@ -136,13 +137,13 @@
 						style="background:{c}"
 					></button>
 				{/each}
-				<label class="relative size-7 overflow-hidden rounded-md border border-dashed border-line-strong" title="ほかの色">
+				<label class="relative size-7 overflow-hidden rounded-md border border-dashed border-line-strong" title={t('material.customColor')}>
 					<input type="color" bind:value={recipe.stroke.color} class="absolute inset-0 size-full cursor-pointer opacity-0" />
 					<span class="pointer-events-none grid size-full place-items-center text-[14px] text-muted">+</span>
 				</label>
 			</div>
 			<label class="flex items-center gap-3">
-				<span class="w-12 text-[13px] text-fg2">太さ</span>
+				<span class="w-16 text-[13px] text-fg2">{t('material.strokeWidth')}</span>
 				<input type="range" min="1" max="16" step="1" bind:value={recipe.stroke.width} class="flex-1" />
 				<span class="w-10 text-right font-mono text-[12px] tabular-nums text-muted">{recipe.stroke.width}</span>
 			</label>
@@ -150,35 +151,35 @@
 	</section>
 
 	<section class="flex flex-col gap-3">
-		<span class="panel-label">配置</span>
+		<span class="panel-label">{t('material.layout')}</span>
 		<div class="flex gap-2">
 			<label class="flex h-9 flex-1 items-center gap-2 rounded-lg border border-line px-3 text-[13px] text-fg2">
 				<input type="checkbox" bind:checked={recipe.italic} class="size-4 accent-accent" />
-				斜め
+				{t('material.italic')}
 			</label>
 			<label class="flex h-9 flex-1 items-center gap-2 rounded-lg border border-line px-3 text-[13px] text-fg2">
 				<input type="checkbox" bind:checked={recipe.vertical} class="size-4 accent-accent" />
-				縦書き
+				{t('material.vertical')}
 			</label>
 		</div>
 		<label class="flex items-center gap-3">
-			<span class="w-12 text-[13px] text-fg2">行間</span>
+			<span class="w-16 text-[13px] text-fg2">{t('material.lineHeight')}</span>
 			<input type="range" min="0.7" max="1.6" step="0.05" bind:value={recipe.lineHeight} class="flex-1" />
 			<span class="w-10 text-right font-mono text-[12px] tabular-nums text-muted">{recipe.lineHeight.toFixed(2)}</span>
 		</label>
 		<label class="flex items-center gap-3">
-			<span class="w-12 text-[13px] text-fg2">余白</span>
+			<span class="w-16 text-[13px] text-fg2">{t('material.padding')}</span>
 			<input type="range" min="0" max="0.25" step="0.01" bind:value={recipe.padding} class="flex-1" />
 			<span class="w-10 text-right font-mono text-[12px] tabular-nums text-muted">{Math.round(recipe.padding * 100)}%</span>
 		</label>
 	</section>
 
 	<section class="flex flex-col gap-2">
-		<span class="panel-label">背景</span>
+		<span class="panel-label">{t('material.background')}</span>
 		<div class="flex items-center gap-2">
 			<button
 				type="button"
-				aria-label="透明"
+				aria-label={t('material.transparent')}
 				aria-pressed={recipe.background === null}
 				onclick={() => (recipe.background = null)}
 				class="checker size-7 rounded-md border border-line-strong {recipe.background === null ? 'outline-2 outline-offset-2 outline-accent' : ''}"

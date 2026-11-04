@@ -43,15 +43,15 @@ export const SOLID_COLORS = [
 	'#ff5fa8'
 ];
 
-export const GRADIENTS: { id: string; label: string; stops: string[] }[] = [
-	{ id: 'sky', label: '空', stops: ['#7cc4ff', '#1185fe'] },
-	{ id: 'deep', label: '深海', stops: ['#1185fe', '#0b2a6b'] },
-	{ id: 'sunset', label: '夕焼け', stops: ['#ffd21f', '#ff4d4f'] },
-	{ id: 'mint', label: 'ミント', stops: ['#c2ffdf', '#14c4a0'] },
-	{ id: 'peach', label: '桃', stops: ['#ffe0ef', '#ff5fa8'] },
-	{ id: 'gold', label: '金', stops: ['#fff3b0', '#d79a00', '#fff3b0'] },
-	{ id: 'silver', label: '銀', stops: ['#ffffff', '#8b97a6', '#e8edf2'] },
-	{ id: 'rainbow', label: '虹', stops: ['#ff4d4f', '#ffd21f', '#2fc96f', '#1185fe', '#8b6cff'] }
+export const GRADIENTS: { id: string; label: string; labelEn: string; stops: string[] }[] = [
+	{ id: 'sky', label: '空', labelEn: 'Sky', stops: ['#7cc4ff', '#1185fe'] },
+	{ id: 'deep', label: '深海', labelEn: 'Deep', stops: ['#1185fe', '#0b2a6b'] },
+	{ id: 'sunset', label: '夕焼け', labelEn: 'Sunset', stops: ['#ffd21f', '#ff4d4f'] },
+	{ id: 'mint', label: 'ミント', labelEn: 'Mint', stops: ['#c2ffdf', '#14c4a0'] },
+	{ id: 'peach', label: '桃', labelEn: 'Peach', stops: ['#ffe0ef', '#ff5fa8'] },
+	{ id: 'gold', label: '金', labelEn: 'Gold', stops: ['#fff3b0', '#d79a00', '#fff3b0'] },
+	{ id: 'silver', label: '銀', labelEn: 'Silver', stops: ['#ffffff', '#8b97a6', '#e8edf2'] },
+	{ id: 'rainbow', label: '虹', labelEn: 'Rainbow', stops: ['#ff4d4f', '#ffd21f', '#2fc96f', '#1185fe', '#8b6cff'] }
 ];
 
 export const defaultRecipe = (): Recipe => ({

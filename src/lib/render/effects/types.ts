@@ -19,6 +19,7 @@ export type Effect = {
 	id: string;
 	category: CategoryId;
 	label: string;
+	labelEn: string;
 	/** 効果の説明。将来、入力語との埋め込み類似度でおすすめを出すときにも使う。 */
 	description: string;
 	/** 全体の位置・大きさ・回転・透明度を変える */
@@ -33,13 +34,13 @@ export type Effect = {
 	over?: (ctx: Ctx2D, f: Frame) => void;
 };
 
-export const CATEGORIES: { id: CategoryId; label: string }[] = [
-	{ id: 'move', label: '動き' },
-	{ id: 'appear', label: '登場' },
-	{ id: 'color', label: '色' },
-	{ id: 'shine', label: '光' },
-	{ id: 'break', label: '崩す' },
-	{ id: 'decorate', label: '飾る' }
+export const CATEGORIES: { id: CategoryId; label: string; labelEn: string }[] = [
+	{ id: 'move', label: '動き', labelEn: 'Move' },
+	{ id: 'appear', label: '登場', labelEn: 'Enter' },
+	{ id: 'color', label: '色', labelEn: 'Color' },
+	{ id: 'shine', label: '光', labelEn: 'Light' },
+	{ id: 'break', label: '崩す', labelEn: 'Break' },
+	{ id: 'decorate', label: '飾る', labelEn: 'Decor' }
 ];
 
 export const TAU = Math.PI * 2;

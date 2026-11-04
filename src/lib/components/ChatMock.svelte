@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/index.svelte';
 	import type { Recipe } from '$lib/render/recipe';
 	import EmojiCanvas from './EmojiCanvas.svelte';
 
@@ -10,11 +11,11 @@
 	<div class="size-9 shrink-0 rounded-full bg-raised"></div>
 	<div class="flex min-w-0 flex-1 flex-col gap-1">
 		<div class="flex items-baseline gap-2 text-[13px]">
-			<span class="font-medium text-fg">あなた</span>
-			<span class="truncate text-muted">@you.bsky.social · 2分</span>
+			<span class="font-medium text-fg">{t('mock.you')}</span>
+			<span class="truncate text-muted">@you.bsky.social · {t('mock.time')}</span>
 		</div>
 		<p class="text-[15px] leading-6 text-fg">
-			今日のぶんの作業、ぜんぶ終わった
+			{t('mock.body')}
 			<EmojiCanvas {recipe} height={22} class="inline-block -mt-1 ml-1 align-middle" />
 		</p>
 		<div class="mt-1 flex items-center gap-2">

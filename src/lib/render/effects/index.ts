@@ -18,6 +18,7 @@ const move: Effect[] = [
 		id: 'shiver',
 		category: 'move',
 		label: 'ぷるぷる',
+		labelEn: 'Shiver',
 		description: '小刻みに震える。寒い、怖い、緊張、こらえている、感動で震える',
 		transform: (f, tr) => {
 			tr.dx += Math.sin(f.t * TAU * 10) * f.h * 0.025;
@@ -28,6 +29,7 @@ const move: Effect[] = [
 		id: 'sway',
 		category: 'move',
 		label: 'ゆらゆら',
+		labelEn: 'Sway',
 		description: '左右にゆっくり揺れる。のんびり、ほのぼの、眠い、ゆるい気分',
 		transform: (f, tr) => {
 			tr.rot += Math.sin(f.t * TAU) * 0.16;
@@ -37,6 +39,7 @@ const move: Effect[] = [
 		id: 'bounce',
 		category: 'move',
 		label: 'ぽよん',
+		labelEn: 'Bounce',
 		description: '弾むように跳ねる。うれしい、元気、楽しい、はずむ気持ち',
 		transform: (f, tr) => {
 			const up = Math.abs(Math.sin(f.t * TAU));
@@ -51,6 +54,7 @@ const move: Effect[] = [
 		id: 'spin',
 		category: 'move',
 		label: 'ぐるぐる',
+		labelEn: 'Spin',
 		description: '一回転する。混乱、目が回る、考え中、ぐるぐる悩む',
 		transform: (f, tr) => {
 			tr.rot += easeInOut(f.t) * TAU;
@@ -60,6 +64,7 @@ const move: Effect[] = [
 		id: 'groove',
 		category: 'move',
 		label: 'ノリノリ',
+		labelEn: 'Groove',
 		description: 'リズムに乗って左右に傾く。音楽、ダンス、テンションが高い、ノリがいい',
 		transform: (f, tr) => {
 			const beat = f.t * 2;
@@ -72,6 +77,7 @@ const move: Effect[] = [
 		id: 'heartbeat',
 		category: 'move',
 		label: 'どきどき',
+		labelEn: 'Heartbeat',
 		description: '鼓動のように二回ずつ大きくなる。好き、ときめき、緊張、どきどきする',
 		transform: (f, tr) => {
 			const pulse = (x: number) => Math.exp(-Math.pow((x % 1) * 9, 2));
@@ -84,6 +90,7 @@ const move: Effect[] = [
 		id: 'flow',
 		category: 'move',
 		label: 'ながれる',
+		labelEn: 'Scroll',
 		description: '右から左へ流れ続ける。電光掲示板、お知らせ、速報、流れていく',
 		filter: (dst, src, f) => {
 			const x = -f.t * f.w;
@@ -103,6 +110,7 @@ const appear: Effect[] = [
 		id: 'zoomin',
 		category: 'appear',
 		label: 'ズーム',
+		labelEn: 'Zoom in',
 		description: '小さい状態から勢いよく大きくなって現れる。登場、ドーン、強調、発表',
 		transform: (f, tr) => {
 			const k = easeOutBack(clamp01(f.t / 0.35));
@@ -114,6 +122,7 @@ const appear: Effect[] = [
 		id: 'fadein',
 		category: 'appear',
 		label: 'ふわっと',
+		labelEn: 'Float in',
 		description: '下からふわりと浮かび上がって現れる。やさしい、静か、おだやか',
 		transform: (f, tr) => {
 			const k = easeOutCubic(clamp01(f.t / 0.45));
@@ -125,6 +134,7 @@ const appear: Effect[] = [
 		id: 'drop',
 		category: 'appear',
 		label: 'ドスン',
+		labelEn: 'Drop',
 		description: '上から落ちてきて弾む。重大、決定、着地、どっしり',
 		transform: (f, tr) => {
 			const k = easeOutBounce(clamp01(f.t / 0.5));
@@ -135,6 +145,7 @@ const appear: Effect[] = [
 		id: 'reveal',
 		category: 'appear',
 		label: 'じわっと',
+		labelEn: 'Reveal',
 		description: '左から順に文字が現れる。読み上げ、タイピング、じわじわ来る',
 		filter: (dst, src, f) => {
 			const k = easeOutCubic(clamp01(f.t / 0.55));
@@ -150,6 +161,7 @@ const color: Effect[] = [
 		id: 'rainbow',
 		category: 'color',
 		label: 'にじいろ',
+		labelEn: 'Rainbow',
 		description: '虹色が流れる。お祝い、最高、ハッピー、華やか、パーティー',
 		paint: (ctx, f) => {
 			const span = f.w * 1.5;
@@ -166,6 +178,7 @@ const color: Effect[] = [
 		id: 'hue',
 		category: 'color',
 		label: 'いろがわり',
+		labelEn: 'Hue shift',
 		description: '色が順番に変わっていく。カラフル、気分が変わる、にぎやか',
 		paint: (ctx, f) => {
 			ctx.fillStyle = `hsl(${Math.round(f.t * 360)} 90% 58%)`;
@@ -176,6 +189,7 @@ const color: Effect[] = [
 		id: 'blink',
 		category: 'color',
 		label: 'ちかちか',
+		labelEn: 'Blink',
 		description: '色が点滅する。注意、警告、緊急、目立たせたい',
 		paint: (ctx, f) => {
 			if (Math.floor(f.t * 8) % 2 === 0) return;
@@ -191,6 +205,7 @@ const shine: Effect[] = [
 		id: 'glint',
 		category: 'shine',
 		label: 'きらり',
+		labelEn: 'Glint',
 		description: '光の筋が斜めに通り抜ける。新品、ぴかぴか、かっこいい、決めポーズ',
 		paint: (ctx, f) => {
 			const p = clamp01(f.t / 0.6);
@@ -208,6 +223,7 @@ const shine: Effect[] = [
 		id: 'neon',
 		category: 'shine',
 		label: 'ネオン',
+		labelEn: 'Neon',
 		description: '文字のまわりがぼんやり光って明滅する。夜、ネオン、おしゃれ、エモい',
 		filter: (dst, src, f) => {
 			const k = 0.75 + 0.25 * Math.sin(f.t * TAU * 2);
@@ -223,6 +239,7 @@ const shine: Effect[] = [
 		id: 'halo',
 		category: 'shine',
 		label: '後光',
+		labelEn: 'Halo',
 		description: '背後から光がさして回る。ありがたい、尊い、神、感謝、拝む',
 		under: (ctx, f) => rays(ctx, f, 12, f.t * (TAU / 12), 'rgba(255, 214, 64, 0.55)', 0)
 	}
@@ -255,6 +272,7 @@ const breakFx: Effect[] = [
 		id: 'glitch',
 		category: 'break',
 		label: 'グリッチ',
+		labelEn: 'Glitch',
 		description: '画面がノイズで乱れてずれる。バグ、エラー、壊れた、動揺、ハッキング',
 		filter: (dst, src, f) => {
 			const step = Math.floor(f.t * 12);
@@ -278,6 +296,7 @@ const breakFx: Effect[] = [
 		id: 'afterimage',
 		category: 'break',
 		label: '残像',
+		labelEn: 'Afterimage',
 		description: '左右に残像が出る。速い、ダッシュ、分身、急いでいる',
 		filter: (dst, src, f) => {
 			const off = Math.sin(f.t * TAU) * f.h * 0.12;
@@ -294,6 +313,7 @@ const breakFx: Effect[] = [
 		id: 'wave',
 		category: 'break',
 		label: 'ぐにゃぐにゃ',
+		labelEn: 'Wobble',
 		description: '波打つようにゆがむ。めまい、溶ける、酔った、ふにゃふにゃ',
 		filter: (dst, src, f) => {
 			const row = Math.max(1, Math.round(f.s * 2));
@@ -338,6 +358,7 @@ const decorate: Effect[] = [
 		id: 'sparkle',
 		category: 'decorate',
 		label: 'キラキラ',
+		labelEn: 'Sparkle',
 		description: '周りに星がきらめく。すごい、素敵、かわいい、輝いている、うれしい',
 		over: (ctx, f) => {
 			const rand = rng(7);
@@ -358,6 +379,7 @@ const decorate: Effect[] = [
 		id: 'focus',
 		category: 'decorate',
 		label: '集中線',
+		labelEn: 'Speed lines',
 		description: '背景に集中線が走る。衝撃、驚き、ドン、注目、迫力',
 		under: (ctx, f) => rays(ctx, f, 36, 0, 'rgba(160, 172, 190, 0.75)', Math.floor(f.t * 8) + 1)
 	},
@@ -365,6 +387,7 @@ const decorate: Effect[] = [
 		id: 'sweat',
 		category: 'decorate',
 		label: '汗',
+		labelEn: 'Sweat',
 		description: '汗のしずくが垂れる。焦り、困った、気まずい、苦笑い、ぎくっ',
 		over: (ctx, f) => {
 			ctx.save();
@@ -379,6 +402,7 @@ const decorate: Effect[] = [
 		id: 'hearts',
 		category: 'decorate',
 		label: 'ハート',
+		labelEn: 'Hearts',
 		description: 'ハートがふわふわ昇っていく。好き、愛、ありがとう、かわいい、推し',
 		over: (ctx, f) => {
 			const rand = rng(31);
@@ -399,6 +423,7 @@ const decorate: Effect[] = [
 		id: 'anger',
 		category: 'decorate',
 		label: 'むかっ',
+		labelEn: 'Anger',
 		description: '怒りマークが脈打つ。怒り、イライラ、むかつく、ぷんぷん',
 		over: (ctx, f) => {
 			const k = 1 + 0.18 * Math.abs(Math.sin(f.t * TAU * 2));
