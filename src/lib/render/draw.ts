@@ -1,6 +1,8 @@
 import { cssFont, fontById } from './fonts';
 import { layoutText, type Measure } from './layout';
-import { emojiSize, type Recipe } from './recipe';
+import { emojiSize, usesImage, type ImageSource, type Recipe } from './recipe';
+import { ensureFont } from './fonts';
+import { ensureImage, imageRect, imageSurface } from './image';
 import { effectById, type Ctx2D, type Effect, type Frame, type Surface, type Transform } from './effects';
 
 const REF = 100;
@@ -16,9 +18,75 @@ export function createSurface(w: number, h: number): Surface {
 const ctxOf = (s: Surface) => s.getContext('2d', { willReadFrequently: false }) as Ctx2D;
 
 /** 文字の縁取りと塗りを別々の層に描いておく。色系エフェクトは塗りの層だけを塗り替える。 */
-export type BaseLayers = { stroke: Surface; fill: Surface; w: number; h: number; scale: number; color: string };
+export type BaseLayers = {
+	stroke: Surface;
+	fill: Surface;
+	w: number;
+	h: number;
+	scale: number;
+	color: string;
+	/** 塗りの層が画像か。色系エフェクトは画像を塗りつぶさず、上から重ねる */
+	image: boolean;
+};
+
+/** 描く前に必要なもの（書体か画像）を読み込む。 */
+export const prepare = (recipe: Recipe) =>
+	usesImage(recipe) ? ensureImage(recipe.image) : ensureFont(fontById(recipe.font), recipe.text);
+
+/** 縁取りの太さぶん外側に広げる方向。太いほど角が丸く見えるよう数を増やす。 */
+const ringOffsets = (r: number) => {
+	const out: [number, number][] = [];
+	for (const radius of r > 3 ? [r, r * 0.5] : [r]) {
+		const n = Math.max(8, Math.min(32, Math.round(radius * 4)));
+		for (let i = 0; i < n; i++) {
+			const a = (i / n) * Math.PI * 2;
+			out.push([Math.cos(a) * radius, Math.sin(a) * radius]);
+		}
+	}
+	return out;
+};
+
+function renderImageBase(recipe: Recipe, image: ImageSource, scale: number): BaseLayers {
+	const { width, height } = emojiSize(recipe.aspect);
+	const w = Math.round(width * scale);
+	const h = Math.round(height * scale);
+	const stroke = createSurface(w, h);
+	const fill = createSurface(w, h);
+	const fctx = ctxOf(fill);
+	const strokePx = recipe.stroke.enabled ? recipe.stroke.width * scale : 0;
+	const color = recipe.stroke.enabled ? recipe.stroke.color : '#ffffff';
+	const src = imageSurface(image);
+	if (!src) return { stroke, fill, w, h, scale, color, image: true };
+
+	// 縁取りが枠からはみ出さないよう、余白に縁取りの太さを足す
+	const pad = recipe.padding * h + strokePx;
+	const box = { x: pad, y: pad, w: Math.max(1, w - pad * 2), h: Math.max(1, h - pad * 2) };
+	const r = imageRect(src.width, src.height, box, image);
+	fctx.save();
+	fctx.beginPath();
+	fctx.rect(box.x, box.y, box.w, box.h);
+	fctx.clip();
+	fctx.imageSmoothingQuality = 'high';
+	fctx.drawImage(src, r.x, r.y, r.w, r.h);
+	fctx.restore();
+
+	if (strokePx > 0) {
+		// 画像の形を縁取りの色で塗り、まわりにずらして重ねる
+		const silhouette = createSurface(w, h);
+		const sil = ctxOf(silhouette);
+		sil.drawImage(fill, 0, 0);
+		sil.globalCompositeOperation = 'source-in';
+		sil.fillStyle = recipe.stroke.color;
+		sil.fillRect(0, 0, w, h);
+		const sctx = ctxOf(stroke);
+		for (const [dx, dy] of ringOffsets(strokePx)) sctx.drawImage(silhouette, dx, dy);
+		sctx.drawImage(silhouette, 0, 0);
+	}
+	return { stroke, fill, w, h, scale, color, image: true };
+}
 
 export function renderBase(recipe: Recipe, scale: number): BaseLayers {
+	if (usesImage(recipe)) return renderImageBase(recipe, recipe.image, scale);
 	const { width, height } = emojiSize(recipe.aspect);
 	const w = Math.round(width * scale);
 	const h = Math.round(height * scale);
@@ -97,7 +165,7 @@ export function renderBase(recipe: Recipe, scale: number): BaseLayers {
 	fctx.globalCompositeOperation = 'source-over';
 
 	const color = recipe.fill.kind === 'solid' ? recipe.fill.color : recipe.fill.stops[0];
-	return { stroke, fill, w, h, scale, color };
+	return { stroke, fill, w, h, scale, color, image: false };
 }
 
 /** フレーム描画で使い回す作業用キャンバス。 */
@@ -130,12 +198,15 @@ export function renderFrame(
 		c.clearRect(0, 0, w, h);
 		c.drawImage(base.fill, 0, 0);
 		c.globalCompositeOperation = 'source-atop';
+		// 画像は塗りつぶすと絵が消えるので、半分透かして重ねる
+		if (base.image) c.globalAlpha = 0.55;
 		for (const e of painters) {
 			c.save();
 			e.paint!(c, f);
 			c.restore();
 		}
 		c.globalCompositeOperation = 'source-over';
+		c.globalAlpha = 1;
 		fillSrc = ws.fill;
 	}
 

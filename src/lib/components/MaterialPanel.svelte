@@ -2,8 +2,23 @@
 	import { localized, t } from '$lib/i18n/index.svelte';
 	import { FONTS } from '$lib/render/fonts';
 	import { ASPECTS, GRADIENTS, SOLID_COLORS, type Recipe } from '$lib/render/recipe';
+	import ImagePanel from './ImagePanel.svelte';
 
-	let { recipe = $bindable() }: { recipe: Recipe } = $props();
+	let {
+		recipe = $bindable(),
+		onpick,
+		ondraw,
+		imageLoading = false,
+		imageError = ''
+	}: {
+		recipe: Recipe;
+		onpick: (file: File) => void;
+		ondraw: () => void;
+		imageLoading?: boolean;
+		imageError?: string;
+	} = $props();
+
+	const isImage = $derived(recipe.source === 'image');
 
 	const sample = $derived([...recipe.text.replace(/\s/g, '')].slice(0, 2).join('') || 'あ');
 	const STROKE_COLORS = ['#ffffff', '#111418', '#1185fe', '#ffd21f', '#ff5fa8'];
@@ -13,6 +28,18 @@
 </script>
 
 <div class="flex flex-col gap-6">
+	<div class="seg w-full" role="group" aria-label={t('material.source')}>
+		<button type="button" class="flex-1" aria-pressed={!isImage} onclick={() => (recipe.source = 'text')}>
+			{t('material.fromText')}
+		</button>
+		<button type="button" class="flex-1" aria-pressed={isImage} onclick={() => (recipe.source = 'image')}>
+			{t('material.fromImage')}
+		</button>
+	</div>
+
+	{#if isImage}
+		<ImagePanel bind:image={recipe.image} {onpick} {ondraw} loading={imageLoading} error={imageError} />
+	{:else}
 	<label class="flex flex-col gap-2">
 		<span class="panel-label">{t('material.text')}</span>
 		<textarea
@@ -27,6 +54,7 @@
 		></textarea>
 		<span class="text-[12px] leading-4 text-muted">{t('material.textHint')}</span>
 	</label>
+	{/if}
 
 	<section class="flex flex-col gap-2">
 		<div class="flex items-center justify-between">
@@ -41,6 +69,7 @@
 		</div>
 	</section>
 
+	{#if !isImage}
 	<section class="flex flex-col gap-2">
 		<span class="panel-label">{t('material.font')}</span>
 		<div class="grid grid-cols-3 gap-2">
@@ -119,6 +148,7 @@
 			</div>
 		{/if}
 	</section>
+	{/if}
 
 	<section class="flex flex-col gap-3">
 		<label class="flex items-center justify-between">
@@ -152,6 +182,7 @@
 
 	<section class="flex flex-col gap-3">
 		<span class="panel-label">{t('material.layout')}</span>
+		{#if !isImage}
 		<div class="flex gap-2">
 			<label class="flex h-9 flex-1 items-center gap-2 rounded-lg border border-line px-3 text-[13px] text-fg2">
 				<input type="checkbox" bind:checked={recipe.italic} class="size-4 accent-accent" />
@@ -167,6 +198,7 @@
 			<input type="range" min="0.7" max="1.6" step="0.05" bind:value={recipe.lineHeight} class="flex-1" />
 			<span class="w-10 text-right font-mono text-[12px] tabular-nums text-muted">{recipe.lineHeight.toFixed(2)}</span>
 		</label>
+		{/if}
 		<label class="flex items-center gap-3">
 			<span class="w-16 text-[13px] text-fg2">{t('material.padding')}</span>
 			<input type="range" min="0" max="0.25" step="0.01" bind:value={recipe.padding} class="flex-1" />
