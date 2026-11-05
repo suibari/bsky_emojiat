@@ -93,7 +93,8 @@ export function removeBackground(data: Uint8ClampedArray, w: number, h: number, 
 
 /**
  * 塗りつぶし（バケツ）。押した画素と色・透明度が近い、つながった範囲を color で塗る。
- * 線のふちの半透明な画素も塗れるよう、透明度の差も距離に含める。
+ * 色の距離は透明度を掛けた RGB で測り、透明な画素の隠れた RGB に左右されないようにする。
+ * 透明な領域を塗るときは、境界の半透明な線の下にも色を敷いて隙間を防ぐ。
  */
 export function floodFill(
 	data: Uint8ClampedArray,
@@ -111,15 +112,14 @@ export function floodFill(
 	const tol = tolerance * 510; // RGBA の最大距離 √(4·255²)
 	const seen = new Uint8Array(w * h);
 	const stack = [sy * w + sx];
-	seen[sy * w + sx] = 1;
+	seen[sy * w + sx] = 2;
 	const near = (i: number) => {
 		const a = i * 4;
-		// 透明な画素は色を持たないとみなす（消しゴムの跡を同じ透明として扱う）
-		const ta = data[a + 3] === 0 && seed[3] === 0;
-		if (ta) return true;
-		let d = 0;
-		for (let k = 0; k < 4; k++) d += (data[a + k] - seed[k]) ** 2;
-		return Math.sqrt(d) <= tol;
+		const alpha = data[a + 3] / 255;
+		const seedAlpha = seed[3] / 255;
+		let d = (data[a + 3] - seed[3]) ** 2;
+		for (let k = 0; k < 3; k++) d += (data[a + k] * alpha - seed[k] * seedAlpha) ** 2;
+		return d <= tol * tol;
 	};
 	while (stack.length) {
 		const i = stack.pop()!;
@@ -129,7 +129,33 @@ export function floodFill(
 		for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1]) {
 			if (j < 0 || seen[j]) continue;
 			seen[j] = 1;
-			if (near(j)) stack.push(j);
+			if (near(j)) {
+				seen[j] = 2;
+				stack.push(j);
+			}
+		}
+	}
+	if (seed[3] !== 0) return;
+	// 探索が終わってから、斜めも含む境界に一度だけ色を敷く。
+	// 境界からは探索を広げず、線の外側や外周のアンチエイリアスを守る。
+	for (let i = 0; i < w * h; i++) {
+		if (seen[i] !== 2) continue;
+		const x = i % w;
+		const y = (i - x) / w;
+		for (let ny = Math.max(0, y - 1); ny <= Math.min(h - 1, y + 1); ny++) {
+			for (let nx = Math.max(0, x - 1); nx <= Math.min(w - 1, x + 1); nx++) {
+				const j = ny * w + nx;
+				const a = j * 4;
+				if (seen[j] >= 2 || data[a + 3] === 0 || data[a + 3] === 255) continue;
+				seen[j] = 3;
+				const alpha = data[a + 3] / 255;
+				const behind = (color[3] / 255) * (1 - alpha);
+				const outAlpha = alpha + behind;
+				for (let k = 0; k < 3; k++) {
+					data[a + k] = (data[a + k] * alpha + color[k] * behind) / outAlpha;
+				}
+				data[a + 3] = outAlpha * 255;
+			}
 		}
 	}
 }

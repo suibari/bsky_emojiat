@@ -69,6 +69,46 @@ describe('normalizeRecipe image', () => {
 });
 
 describe('floodFill', () => {
+	it.each([
+		[255, 82, 170],
+		[255, 255, 255],
+		[0, 0, 0],
+		[0, 128, 255]
+	])('fills an antialiased outline without a seam for RGB %s, %s, %s', (r, g, b) => {
+		const w = 11;
+		const data = new Uint8ClampedArray(w * w * 4);
+		for (let y = 0; y < w; y++) {
+			for (let x = 0; x < w; x++) {
+				const radius = Math.max(Math.abs(x - 5), Math.abs(y - 5));
+				const alpha = [0, 48, 192, 255, 128, 0][radius];
+				data.set([r, g, b, alpha], (y * w + x) * 4);
+			}
+		}
+		const before = data.slice();
+		floodFill(data, w, w, 5, 5, [r, g, b, 255], 0.3);
+		for (let y = 0; y < w; y++) {
+			for (let x = 0; x < w; x++) {
+				const offset = (y * w + x) * 4;
+				if (Math.max(Math.abs(x - 5), Math.abs(y - 5)) <= 3) {
+					expect([...data.slice(offset, offset + 4)]).toEqual([r, g, b, 255]);
+				} else {
+					expect(data.slice(offset, offset + 4)).toEqual(before.slice(offset, offset + 4));
+				}
+			}
+		}
+	});
+	it('places fill beneath a translucent boundary without crossing it', () => {
+		const data = new Uint8ClampedArray([
+			0, 0, 0, 0,
+			0, 0, 0, 192,
+			0, 0, 0, 255,
+			0, 0, 0, 128,
+			0, 0, 0, 0
+		]);
+		floodFill(data, 5, 1, 0, 0, [255, 128, 64, 255], 0.3);
+		expect([...data.slice(4, 8)]).toEqual([63, 32, 16, 255]);
+		expect([...data.slice(8)]).toEqual([0, 0, 0, 255, 0, 0, 0, 128, 0, 0, 0, 0]);
+	});
 	it('fills the connected area and stops at a different color', () => {
 		const { data, w, h } = img(['wwwww', 'rrrrr', 'wwwww']);
 		floodFill(data, w, h, 0, 0, [0, 0, 255, 255], 0.1);
