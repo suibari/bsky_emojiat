@@ -3,12 +3,13 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { ArrowUpRight, Download } from 'lucide-svelte';
+	import { ArrowUpRight, Download, ImagePlus } from 'lucide-svelte';
 	import EmojiCanvas from '$lib/components/EmojiCanvas.svelte';
 	import MaterialPanel from '$lib/components/MaterialPanel.svelte';
 	import EffectPanel from '$lib/components/EffectPanel.svelte';
 	import ChatMock from '$lib/components/ChatMock.svelte';
-	import { defaultRecipe, emojiSize, isAnimated, normalizeRecipe, type Recipe } from '$lib/render/recipe';
+	import { defaultImage, defaultRecipe, emojiSize, isAnimated, normalizeRecipe, usesImage, type Recipe } from '$lib/render/recipe';
+	import { importImage } from '$lib/render/image';
 	import { MAX_EMOJI_BYTES, encodeEmoji, type Encoded } from '$lib/render/encode';
 	import { EMOJI_NAME_PATTERN, altOf, saveEmoji } from '$lib/atproto/bluemoji';
 	import { session } from '$lib/atproto/session.svelte';
@@ -33,6 +34,9 @@
 	let progress = $state(0);
 	let notice: { kind: 'ok' | 'error'; text: string; nagi?: boolean } | null = $state(null);
 	let stageWidth = $state(0);
+	let imageLoading = $state(false);
+	let imageError = $state('');
+	let dropping = $state(false);
 
 	const nameValid = $derived(EMOJI_NAME_PATTERN.test(name));
 	const size = $derived(emojiSize(recipe.aspect));
@@ -52,6 +56,67 @@
 				editing = { kind: 'local', id: item.id, createdAt: item.createdAt };
 			}
 		}
+	});
+
+	async function pickImage(file: File) {
+		imageLoading = true;
+		imageError = '';
+		try {
+			recipe.image = defaultImage(await importImage(file));
+			recipe.source = 'image';
+		} catch {
+			imageError = t('image.failed');
+		} finally {
+			imageLoading = false;
+		}
+	}
+
+	/** 画像をクリップボードから貼り付けたら、そのまま画像から作る。文字入力中の貼り付けは邪魔しない */
+	function onPaste(e: ClipboardEvent) {
+		const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'));
+		if (!file) return;
+		const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+		if (typing && e.clipboardData?.types.includes('text/plain')) return;
+		e.preventDefault();
+		void pickImage(file);
+	}
+
+	function onStageDrop(e: DragEvent) {
+		dropping = false;
+		const file = [...(e.dataTransfer?.files ?? [])].find((f) => f.type.startsWith('image/'));
+		if (!file) return;
+		e.preventDefault();
+		void pickImage(file);
+	}
+
+	// プレビューをドラッグして画像を動かす。ずれは枠に対する割合なので表示の大きさで割る
+	let drag: { id: number; x: number; y: number; ox: number; oy: number } | null = null;
+	function onStageDown(e: PointerEvent) {
+		if (!usesImage(recipe) || e.button !== 0) return;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		drag = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: recipe.image.x, oy: recipe.image.y };
+	}
+	function onStageMove(e: PointerEvent) {
+		if (!drag || drag.id !== e.pointerId || !recipe.image) return;
+		const clamp = (v: number) => Math.min(1, Math.max(-1, v));
+		recipe.image.x = clamp(drag.ox + (e.clientX - drag.x) / (stageHeight * recipe.aspect));
+		recipe.image.y = clamp(drag.oy + (e.clientY - drag.y) / stageHeight);
+	}
+	function onStageUp(e: PointerEvent) {
+		if (drag?.id === e.pointerId) drag = null;
+	}
+	// ホイール（トラックパッドのピンチ）で拡大縮小。preventDefault するので passive にしない
+	let stage: HTMLDivElement | undefined = $state();
+	$effect(() => {
+		if (!stage) return;
+		const onWheel = (e: WheelEvent) => {
+			if (!usesImage(recipe)) return;
+			e.preventDefault();
+			const z = recipe.image.zoom * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015));
+			recipe.image.zoom = Math.min(4, Math.max(0.5, z));
+		};
+		stage.addEventListener('wheel', onWheel, { passive: false });
+		return () => stage?.removeEventListener('wheel', onWheel);
 	});
 
 	function startNew() {
@@ -124,7 +189,7 @@
 			if (!r) return;
 			const agent = session.agent;
 			if (!agent) return;
-			const saved = await saveEmoji(agent, { name, alt: altOf($state.snapshot(recipe) as Recipe), blob: r.blob });
+			const saved = await saveEmoji(agent, { name, alt: altOf($state.snapshot(recipe) as Recipe, name), blob: r.blob });
 			await remember(r, saved.rkey);
 			notice = { kind: 'ok', text: t('editor.savedPds', { name }), nagi: true };
 		} catch (e) {
@@ -134,6 +199,8 @@
 		}
 	}
 </script>
+
+<svelte:window onpaste={onPaste} />
 
 <div class="mx-auto grid w-full max-w-[1600px] flex-1 gap-4 p-4 md:p-6 lg:grid-cols-[320px_minmax(0,1fr)_340px] lg:gap-6">
 	<!-- プレビュー（スマホでは先頭） -->
@@ -146,11 +213,48 @@
 				<button type="button" class="btn btn-ghost btn-sm" onclick={startNew}>{t('editor.startNew')}</button>
 			{/if}
 		</div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
+			bind:this={stage}
 			bind:clientWidth={stageWidth}
-			class="checker grid min-h-[208px] place-items-center rounded-2xl border border-line p-6 lg:min-h-[320px]"
+			ondragover={(e) => {
+				if (![...(e.dataTransfer?.items ?? [])].some((i) => i.kind === 'file')) return;
+				e.preventDefault();
+				dropping = true;
+			}}
+			ondragleave={() => (dropping = false)}
+			ondrop={onStageDrop}
+			onpointerdown={onStageDown}
+			onpointermove={onStageMove}
+			onpointerup={onStageUp}
+			onpointercancel={onStageUp}
+			class="checker grid min-h-[208px] place-items-center rounded-2xl border p-6 lg:min-h-[320px]
+				{dropping ? 'border-accent' : 'border-line'}
+				{usesImage(recipe) ? 'cursor-grab touch-none select-none active:cursor-grabbing' : ''}"
 		>
-			<EmojiCanvas {recipe} height={stageHeight} />
+			{#if recipe.source === 'image' && !recipe.image}
+				<!-- 画像を選ぶ前は文字の絵文字を出さず、ここが置き場所だと分かるようにする -->
+				<label
+					class="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed px-8 py-6 text-center transition-colors duration-150
+						{dropping ? 'border-accent text-fg' : 'border-line-strong text-fg2 hover:border-fg2 hover:text-fg'}"
+					style="width:{Math.min(stageHeight * recipe.aspect, stageWidth - 48)}px;height:{stageHeight}px;justify-content:center"
+				>
+					<input
+						type="file"
+						accept="image/png,image/jpeg,image/webp,image/gif"
+						class="hidden"
+						onchange={(e) => {
+							const file = e.currentTarget.files?.[0];
+							if (file) void pickImage(file);
+							e.currentTarget.value = '';
+						}}
+					/>
+					<ImagePlus size={24} strokeWidth={1.5} />
+					<span class="text-[13px]">{imageLoading ? t('image.loading') : t('image.drop')}</span>
+				</label>
+			{:else}
+				<EmojiCanvas {recipe} height={stageHeight} />
+			{/if}
 		</div>
 		<div class="flex items-center justify-between font-mono text-[12px] text-muted">
 			<span>{animated ? 'GIF' : 'PNG'} · {size.width}×{size.height}</span>
@@ -161,7 +265,7 @@
 
 	<!-- スマホ用の切替 -->
 	<div class="seg w-full lg:hidden" role="group" aria-label={t('editor.tabMaterial')}>
-		<button type="button" class="flex-1" aria-pressed={tab === 'material'} onclick={() => (tab = 'material')}>{t('editor.tabMaterial')}</button>
+		<button type="button" class="flex-1" aria-pressed={tab === 'material'} onclick={() => (tab = 'material')}>{recipe.source === 'image' ? t('editor.tabImage') : t('editor.tabMaterial')}</button>
 		<button type="button" class="flex-1" aria-pressed={tab === 'effect'} onclick={() => (tab = 'effect')}>
 			{t('editor.tabEffect')}{recipe.effects.length ? ` ${recipe.effects.length}` : ''}
 		</button>
@@ -171,7 +275,7 @@
 		class="rounded-2xl border border-line bg-card p-4 lg:order-1 lg:block lg:max-h-[calc(100dvh-56px-48px-72px)] lg:overflow-y-auto {tab === 'material' ? '' : 'hidden'}"
 		aria-label={t('editor.tabMaterial')}
 	>
-		<MaterialPanel bind:recipe />
+		<MaterialPanel bind:recipe onpick={pickImage} {imageLoading} {imageError} />
 	</section>
 
 	<section

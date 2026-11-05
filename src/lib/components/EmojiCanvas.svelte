@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { createWorkspace, renderBase, renderFrame, resolveEffects, type BaseLayers, type Workspace } from '$lib/render/draw';
-	import { ensureFont, fontById } from '$lib/render/fonts';
+	import { createWorkspace, prepare, renderBase, renderFrame, resolveEffects, type BaseLayers, type Workspace } from '$lib/render/draw';
 	import type { Recipe } from '$lib/render/recipe';
 	import { fontsVersion } from '$lib/fontsVersion.svelte';
 
@@ -22,11 +21,13 @@
 		void fontsVersion.value;
 		const scale = (height * dpr) / 128;
 		let cancelled = false;
-		ensureFont(fontById(r.font), r.text).then(() => {
+		prepare(r).then(() => {
 			if (cancelled) return;
 			const next = renderBase(r, scale);
 			ws = createWorkspace(next.w, next.h);
 			base = next;
+		}).catch(() => {
+			// 壊れた画像などは描かずにおく（書き出し時にエラーとして出る）
 		});
 		return () => {
 			cancelled = true;

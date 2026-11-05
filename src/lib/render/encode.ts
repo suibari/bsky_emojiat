@@ -1,7 +1,6 @@
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
-import { createSurface, createWorkspace, renderBase, renderFrame, resolveEffects } from './draw';
+import { createSurface, createWorkspace, prepare, renderBase, renderFrame, resolveEffects } from './draw';
 import { isAnimated, type Recipe } from './recipe';
-import { ensureFont, fontById } from './fonts';
 import type { Ctx2D } from './effects';
 
 /** Nagi が gif_128 / png_128 として受け付ける blob の上限（nagi_client の MAX_EMOJI_BLOB_SIZE）。 */
@@ -29,7 +28,7 @@ async function toPng(surface: ReturnType<typeof createSurface>): Promise<Blob> {
 }
 
 export async function encodeEmoji(recipe: Recipe, onProgress?: (p: number) => void): Promise<Encoded> {
-	await ensureFont(fontById(recipe.font), recipe.text);
+	await prepare(recipe);
 	const base = renderBase(recipe, 1);
 	const { w, h } = base;
 	const out = createSurface(w, h);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BLUEMOJI_ITEM, altOf, blobInfo, buildItemRecord, createRkey } from '../src/lib/atproto/bluemoji';
-import { defaultRecipe, normalizeRecipe } from '../src/lib/render/recipe';
+import { defaultImage, defaultRecipe, normalizeRecipe } from '../src/lib/render/recipe';
 
 const blob = { $type: 'blob', ref: { $link: 'bafkreiexample' }, mimeType: 'image/gif', size: 1234 };
 
@@ -48,7 +48,8 @@ describe('normalizeRecipe', () => {
 		expect(normalizeRecipe({ aspect: 4 }).aspect).toBe(4);
 	});
 	it('builds alt text from the recipe', () => {
-		expect(altOf({ ...defaultRecipe(), text: 'ありが\nとう' })).toBe('ありが とう');
+		expect(altOf({ ...defaultRecipe(), text: 'ありが\nとう' }, 'x')).toBe('ありが とう');
+		expect(altOf({ ...defaultRecipe(), source: 'image', image: defaultImage('data:image/png;base64,') }, 'cat')).toBe('cat');
 	});
 });
 

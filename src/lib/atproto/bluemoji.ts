@@ -68,7 +68,9 @@ export function buildItemRecord(input: {
 	};
 }
 
-export const altOf = (recipe: Recipe) => recipe.text.replace(/\s+/g, ' ').trim().slice(0, 100);
+/** 代替テキスト。画像から作った絵文字は文字を持たないので名前を使う。 */
+export const altOf = (recipe: Recipe, name: string) =>
+	(recipe.source === 'image' ? '' : recipe.text.replace(/\s+/g, ' ').trim().slice(0, 100)) || name;
 
 async function pdsUrl(agent: Agent) {
 	const session = (agent as unknown as { sessionManager: { getTokenInfo?: () => Promise<{ aud: string }> } })

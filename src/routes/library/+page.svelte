@@ -89,7 +89,7 @@
 		if (!agent) return;
 		working = item.id;
 		try {
-			const saved = await saveEmoji(agent, { name: item.name, alt: altOf(item.recipe), blob: item.blob });
+			const saved = await saveEmoji(agent, { name: item.name, alt: altOf(item.recipe, item.name), blob: item.blob });
 			await putLocal({ ...$state.snapshot(item), rkey: saved.rkey } as LocalEmoji);
 			await Promise.all([loadLocal(), loadPds()]);
 		} catch (e) {
@@ -181,7 +181,7 @@
 				{#each local as e (e.id)}
 					<li class="flex flex-col gap-3 rounded-xl border border-line bg-card p-3">
 						<div class="checker grid h-24 place-items-center rounded-lg p-2">
-							<img src={e.url} alt={e.recipe.text} class="max-h-16 max-w-full object-contain" />
+							<img src={e.url} alt={altOf(e.recipe, e.name)} class="max-h-16 max-w-full object-contain" />
 						</div>
 						<div class="flex min-w-0 flex-col">
 							<span class="truncate font-mono text-[13px]">:{e.name}:</span>
