@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { imageRect, removeBackground } from '../src/lib/render/image';
+import { floodFill, imageRect, removeBackground } from '../src/lib/render/image';
 import { defaultImage, normalizeRecipe } from '../src/lib/render/recipe';
 
 const box = { x: 0, y: 0, w: 128, h: 128 };
@@ -65,5 +65,23 @@ describe('normalizeRecipe image', () => {
 	it('falls back to text when the image is missing or not a data URL', () => {
 		expect(normalizeRecipe({ source: 'image' }).source).toBe('text');
 		expect(normalizeRecipe({ source: 'image', image: { src: 'https://example.com/a.png' } }).image).toBeNull();
+	});
+});
+
+describe('floodFill', () => {
+	it('fills the connected area and stops at a different color', () => {
+		const { data, w, h } = img(['wwwww', 'rrrrr', 'wwwww']);
+		floodFill(data, w, h, 0, 0, [0, 0, 255, 255], 0.1);
+		expect([...data.slice(0, 4)]).toEqual([0, 0, 255, 255]);
+		expect([...data.slice(4 * 4, 4 * 4 + 4)]).toEqual([0, 0, 255, 255]);
+		// 赤い線の下は塗られない
+		expect([...data.slice(2 * w * 4, 2 * w * 4 + 4)]).toEqual([255, 255, 255, 255]);
+	});
+	it('treats every transparent pixel as the same', () => {
+		const { data, w, h } = img(['..', '..']);
+		data[3 * 4] = 0;
+		data[3 * 4 + 1] = 99;
+		floodFill(data, w, h, 0, 0, [1, 2, 3, 255], 0);
+		expect(data[3 * 4 + 3]).toBe(255);
 	});
 });

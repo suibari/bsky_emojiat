@@ -3,11 +3,12 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { ArrowUpRight, Download, ImagePlus } from 'lucide-svelte';
+	import { ArrowUpRight, Download, ImagePlus, Pencil } from 'lucide-svelte';
 	import EmojiCanvas from '$lib/components/EmojiCanvas.svelte';
 	import MaterialPanel from '$lib/components/MaterialPanel.svelte';
 	import EffectPanel from '$lib/components/EffectPanel.svelte';
 	import ChatMock from '$lib/components/ChatMock.svelte';
+	import DrawPad from '$lib/components/DrawPad.svelte';
 	import { defaultImage, defaultRecipe, emojiSize, isAnimated, normalizeRecipe, usesImage, type Recipe } from '$lib/render/recipe';
 	import { importImage } from '$lib/render/image';
 	import { MAX_EMOJI_BYTES, encodeEmoji, type Encoded } from '$lib/render/encode';
@@ -37,6 +38,14 @@
 	let imageLoading = $state(false);
 	let imageError = $state('');
 	let dropping = $state(false);
+	let drawing = $state(false);
+
+	/** 描いた絵は絵文字の枠ちょうどの大きさなので、全体・等倍で置けば描いたとおりに見える */
+	function finishDrawing(src: string) {
+		recipe.image = defaultImage(src);
+		recipe.source = 'image';
+		drawing = false;
+	}
 
 	const nameValid = $derived(EMOJI_NAME_PATTERN.test(name));
 	const size = $derived(emojiSize(recipe.aspect));
@@ -234,24 +243,35 @@
 		>
 			{#if recipe.source === 'image' && !recipe.image}
 				<!-- 画像を選ぶ前は文字の絵文字を出さず、ここが置き場所だと分かるようにする -->
-				<label
-					class="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed px-8 py-6 text-center transition-colors duration-150
-						{dropping ? 'border-accent text-fg' : 'border-line-strong text-fg2 hover:border-fg2 hover:text-fg'}"
-					style="width:{Math.min(stageHeight * recipe.aspect, stageWidth - 48)}px;height:{stageHeight}px;justify-content:center"
+				<div
+					class="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 text-center transition-colors duration-150
+						{dropping ? 'border-accent text-fg' : 'border-line-strong text-fg2'}"
+					style="width:{Math.min(Math.max(stageHeight * recipe.aspect, 240), stageWidth - 48)}px;height:{stageHeight}px"
 				>
-					<input
-						type="file"
-						accept="image/png,image/jpeg,image/webp,image/gif"
-						class="hidden"
-						onchange={(e) => {
-							const file = e.currentTarget.files?.[0];
-							if (file) void pickImage(file);
-							e.currentTarget.value = '';
-						}}
-					/>
-					<ImagePlus size={24} strokeWidth={1.5} />
-					<span class="text-[13px]">{imageLoading ? t('image.loading') : t('image.drop')}</span>
-				</label>
+					<span class="flex flex-col items-center gap-2">
+						<ImagePlus size={24} strokeWidth={1.5} />
+						<span class="text-[13px]">{imageLoading ? t('image.loading') : t('image.drop')}</span>
+					</span>
+					<span class="flex flex-wrap justify-center gap-2">
+						<label class="btn btn-secondary btn-sm cursor-pointer">
+							<input
+								type="file"
+								accept="image/png,image/jpeg,image/webp,image/gif"
+								class="hidden"
+								onchange={(e) => {
+									const file = e.currentTarget.files?.[0];
+									if (file) void pickImage(file);
+									e.currentTarget.value = '';
+								}}
+							/>
+							{t('image.pick')}
+						</label>
+						<button type="button" class="btn btn-secondary btn-sm" onclick={() => (drawing = true)}>
+							<Pencil size={16} strokeWidth={1.5} />
+							{t('draw.start')}
+						</button>
+					</span>
+				</div>
 			{:else}
 				<EmojiCanvas {recipe} height={stageHeight} />
 			{/if}
@@ -275,7 +295,7 @@
 		class="rounded-2xl border border-line bg-card p-4 lg:order-1 lg:block lg:max-h-[calc(100dvh-56px-48px-72px)] lg:overflow-y-auto {tab === 'material' ? '' : 'hidden'}"
 		aria-label={t('editor.tabMaterial')}
 	>
-		<MaterialPanel bind:recipe onpick={pickImage} {imageLoading} {imageError} />
+		<MaterialPanel bind:recipe onpick={pickImage} ondraw={() => (drawing = true)} {imageLoading} {imageError} />
 	</section>
 
 	<section
@@ -334,3 +354,12 @@
 		</div>
 	</div>
 </div>
+
+{#if drawing}
+	<DrawPad
+		aspect={recipe.aspect}
+		image={usesImage(recipe) ? ($state.snapshot(recipe.image) as typeof recipe.image) : null}
+		oncancel={() => (drawing = false)}
+		ondone={finishDrawing}
+	/>
+{/if}

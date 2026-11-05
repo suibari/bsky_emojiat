@@ -91,6 +91,49 @@ export function removeBackground(data: Uint8ClampedArray, w: number, h: number, 
 	}
 }
 
+/**
+ * 塗りつぶし（バケツ）。押した画素と色・透明度が近い、つながった範囲を color で塗る。
+ * 線のふちの半透明な画素も塗れるよう、透明度の差も距離に含める。
+ */
+export function floodFill(
+	data: Uint8ClampedArray,
+	w: number,
+	h: number,
+	sx: number,
+	sy: number,
+	color: [number, number, number, number],
+	tolerance: number
+) {
+	if (sx < 0 || sy < 0 || sx >= w || sy >= h) return;
+	const start = (sy * w + sx) * 4;
+	const seed = [data[start], data[start + 1], data[start + 2], data[start + 3]];
+	if (seed.every((v, i) => v === color[i])) return;
+	const tol = tolerance * 510; // RGBA の最大距離 √(4·255²)
+	const seen = new Uint8Array(w * h);
+	const stack = [sy * w + sx];
+	seen[sy * w + sx] = 1;
+	const near = (i: number) => {
+		const a = i * 4;
+		// 透明な画素は色を持たないとみなす（消しゴムの跡を同じ透明として扱う）
+		const ta = data[a + 3] === 0 && seed[3] === 0;
+		if (ta) return true;
+		let d = 0;
+		for (let k = 0; k < 4; k++) d += (data[a + k] - seed[k]) ** 2;
+		return Math.sqrt(d) <= tol;
+	};
+	while (stack.length) {
+		const i = stack.pop()!;
+		data.set(color, i * 4);
+		const x = i % w;
+		const y = (i - x) / w;
+		for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1]) {
+			if (j < 0 || seen[j]) continue;
+			seen[j] = 1;
+			if (near(j)) stack.push(j);
+		}
+	}
+}
+
 /* ---------- ブラウザ側の読み込み ---------- */
 
 function newSurface(w: number, h: number): Surface {
@@ -112,6 +155,12 @@ function toDataUrl(w: number, h: number, draw: (ctx: CanvasRenderingContext2D) =
 	c.height = h;
 	const ctx = c.getContext('2d')!;
 	draw(ctx);
+	return canvasToDataUrl(c);
+}
+
+/** 画像として取っておくための data URL。描いた絵は線がにじまないよう lossless（PNG）にする。 */
+export function canvasToDataUrl(c: HTMLCanvasElement, lossless = false) {
+	if (lossless) return c.toDataURL('image/png');
 	// WebP が書けないブラウザ（Safari）は PNG になる。どちらも透過を保つ
 	const webp = c.toDataURL('image/webp', 0.92);
 	return webp.startsWith('data:image/webp') ? webp : c.toDataURL('image/png');

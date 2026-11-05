@@ -7,9 +7,16 @@
 	let {
 		recipe = $bindable(),
 		onpick,
+		ondraw,
 		imageLoading = false,
 		imageError = ''
-	}: { recipe: Recipe; onpick: (file: File) => void; imageLoading?: boolean; imageError?: string } = $props();
+	}: {
+		recipe: Recipe;
+		onpick: (file: File) => void;
+		ondraw: () => void;
+		imageLoading?: boolean;
+		imageError?: string;
+	} = $props();
 
 	const isImage = $derived(recipe.source === 'image');
 
@@ -31,7 +38,7 @@
 	</div>
 
 	{#if isImage}
-		<ImagePanel bind:image={recipe.image} {onpick} loading={imageLoading} error={imageError} />
+		<ImagePanel bind:image={recipe.image} {onpick} {ondraw} loading={imageLoading} error={imageError} />
 	{:else}
 	<label class="flex flex-col gap-2">
 		<span class="panel-label">{t('material.text')}</span>

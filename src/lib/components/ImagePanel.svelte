@@ -1,14 +1,21 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/index.svelte';
-	import { ImagePlus, Crosshair } from 'lucide-svelte';
+	import { ImagePlus, Crosshair, Pencil } from 'lucide-svelte';
 	import type { ImageSource } from '$lib/render/recipe';
 
 	let {
 		image = $bindable(),
 		onpick,
+		ondraw,
 		loading = false,
 		error = ''
-	}: { image: ImageSource | null; onpick: (file: File) => void; loading?: boolean; error?: string } = $props();
+	}: {
+		image: ImageSource | null;
+		onpick: (file: File) => void;
+		ondraw: () => void;
+		loading?: boolean;
+		error?: string;
+	} = $props();
 
 	let input: HTMLInputElement | undefined = $state();
 	let over = $state(false);
@@ -57,6 +64,10 @@
 				<span class="font-mono text-[11px] leading-4 text-muted">PNG · JPEG · WebP · GIF</span>
 			</span>
 		</button>
+		<button type="button" class="btn btn-secondary" onclick={ondraw}>
+			<Pencil size={16} strokeWidth={1.5} />
+			{t('draw.start')}
+		</button>
 	{:else}
 		<div class="flex items-center gap-3">
 			<span class="checker grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-line">
@@ -70,10 +81,18 @@
 					}}
 				/>
 			</span>
-			<span class="flex-1 font-mono text-[12px] tabular-nums text-muted">{natural ? `${natural.w}×${natural.h}` : ''}</span>
-			<button type="button" class="btn btn-secondary btn-sm" onclick={() => input?.click()} disabled={loading}>
-				{loading ? t('image.loading') : t('image.replace')}
-			</button>
+			<div class="flex min-w-0 flex-1 flex-col gap-2">
+				<span class="font-mono text-[12px] leading-4 tabular-nums text-muted">{natural ? `${natural.w}×${natural.h}` : ''}</span>
+				<div class="flex gap-2">
+					<button type="button" class="btn btn-secondary btn-sm flex-1 px-2" onclick={ondraw}>
+						<Pencil size={16} strokeWidth={1.5} />
+						{t('draw.over')}
+					</button>
+					<button type="button" class="btn btn-secondary btn-sm flex-1 px-2" onclick={() => input?.click()} disabled={loading}>
+						{loading ? t('image.loading') : t('image.replace')}
+					</button>
+				</div>
+			</div>
 		</div>
 
 		<section class="flex flex-col gap-3">
