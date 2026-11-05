@@ -176,7 +176,7 @@
 
 	<section class="flex flex-col gap-2">
 		<span class="panel-label">{t('material.background')}</span>
-		<div class="flex items-center gap-2">
+		<div class="flex flex-wrap items-center gap-2">
 			<button
 				type="button"
 				aria-label={t('material.transparent')}
@@ -194,6 +194,16 @@
 					style="background:{c}"
 				></button>
 			{/each}
+			<label class="relative size-7 overflow-hidden rounded-md border border-dashed border-line-strong" title={t('material.customColor')}>
+				<input
+					type="color"
+					aria-label={t('material.customColor')}
+					value={recipe.background ?? '#ffffff'}
+					oninput={(e) => (recipe.background = e.currentTarget.value)}
+					class="absolute inset-0 size-full cursor-pointer opacity-0"
+				/>
+				<span class="pointer-events-none grid size-full place-items-center text-[14px] text-muted">+</span>
+			</label>
 		</div>
 	</section>
 </div>
