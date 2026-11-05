@@ -4,6 +4,7 @@
 	import { Eraser, PaintBucket, Pencil, Redo2, Trash2, Undo2, X } from 'lucide-svelte';
 	import { SOLID_COLORS, type Aspect, type ImageSource } from '$lib/render/recipe';
 	import { canvasToDataUrl, ensureImage, floodFill, imageRect, imageSurface } from '$lib/render/image';
+	import { TwoFingerTap } from '$lib/two-finger-tap';
 
 	let {
 		aspect,
@@ -80,9 +81,9 @@
 		};
 	});
 
-	function snapshot() {
+	function snapshot(before?: ImageData) {
 		if (!ctx) return;
-		past = [...past, ctx.getImageData(0, 0, W, H)].slice(-HISTORY);
+		past = [...past, before ?? ctx.getImageData(0, 0, W, H)].slice(-HISTORY);
 		future = [];
 	}
 	function undo() {
@@ -116,11 +117,32 @@
 	}
 
 	let stroke: { id: number; x: number; y: number } | null = null;
+	const touchTap = new TwoFingerTap();
+	let touchBefore: { image: ImageData; past: ImageData[]; future: ImageData[] } | null = null;
 
 	function down(e: PointerEvent) {
 		if (!ctx || !ready || e.button !== 0) return;
+		if (e.pointerType === 'touch') {
+			if (!touchTap.active) {
+				touchBefore = { image: ctx.getImageData(0, 0, W, H), past, future };
+			}
+			touchTap.down(e);
+			canvas!.setPointerCapture(e.pointerId);
+			if (touchTap.multiple) {
+				// 最初の指の描画を取り消し、履歴もタップ前に戻してから判定する。
+				stroke = null;
+				ctx.globalCompositeOperation = 'source-over';
+				if (touchBefore) {
+					ctx.putImageData(touchBefore.image, 0, 0);
+					past = touchBefore.past;
+					future = touchBefore.future;
+					touchBefore = null;
+				}
+				return;
+			}
+		} else if (stroke || touchTap.active) return;
 		const p = point(e);
-		snapshot();
+		snapshot(touchBefore?.image);
 		if (tool === 'fill') {
 			const img = ctx.getImageData(0, 0, W, H);
 			floodFill(img.data, W, H, Math.floor(p.x), Math.floor(p.y), rgba(color), FILL_TOLERANCE);
@@ -140,6 +162,11 @@
 		ctx.fill();
 	}
 	function move(e: PointerEvent) {
+		if (e.pointerType === 'touch') {
+			for (const ev of e.getCoalescedEvents?.() ?? []) touchTap.move(ev);
+			touchTap.move(e);
+			if (touchTap.multiple) return;
+		}
 		if (!ctx || !stroke || stroke.id !== e.pointerId) return;
 		// 速く動かしても線がかくつかないよう、間引かれた点も使う
 		const events = e.getCoalescedEvents?.() ?? [e];
@@ -154,6 +181,10 @@
 		ctx.stroke();
 	}
 	function up(e: PointerEvent) {
+		if (e.pointerType === 'touch') {
+			if (touchTap.up(e, e.type === 'pointercancel')) undo();
+			if (!touchTap.active) touchBefore = null;
+		}
 		if (stroke?.id !== e.pointerId) return;
 		stroke = null;
 		if (ctx) ctx.globalCompositeOperation = 'source-over';
