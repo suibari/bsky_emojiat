@@ -46,11 +46,16 @@
 	let future: ImageData[] = $state.raw([]);
 	let stageWidth = $state(0);
 	let viewportHeight = $state(800);
+	let viewportWidth = $state(1200);
 	let ready = $state(false);
 
 	const dirty = $derived(past.length > 0);
+	// 横長の画面（横向きタブレットなど）では道具を右に寄せ、縦をキャンバスに回す
+	const side = $derived(viewportWidth >= 768 && viewportWidth > viewportHeight);
+	// キャンバス以外が縦に使う高さ。横並びなら見出しと余白だけ、縦並びなら道具とフッターも下に積まれる
+	const chromeH = $derived(side ? 160 : 340);
 	const displayH = $derived(
-		Math.max(96, Math.min(420, viewportHeight - 340, stageWidth ? (stageWidth - 32) / aspect : 320))
+		Math.max(96, Math.min(800, viewportHeight - chromeH, stageWidth ? (stageWidth - 32) / aspect : 320))
 	);
 
 	onMount(() => {
@@ -209,16 +214,16 @@
 	}
 </script>
 
-<svelte:window onkeydown={onKey} bind:innerHeight={viewportHeight} />
+<svelte:window onkeydown={onKey} bind:innerHeight={viewportHeight} bind:innerWidth={viewportWidth} />
 
-<div class="fixed inset-0 z-50 flex items-end justify-center bg-deep/80 sm:items-center sm:p-6">
+<div class="fixed inset-0 z-50 flex items-end justify-center bg-deep/80 sm:items-center {side ? 'p-3' : 'sm:p-6'}">
 	<div
 		bind:this={dialog}
 		tabindex="-1"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="drawpad-title"
-		class="flex max-h-dvh w-full max-w-[960px] flex-col gap-4 overflow-y-auto rounded-t-2xl border border-line bg-card p-4 outline-none sm:rounded-2xl md:p-6"
+		class="flex max-h-dvh w-full flex-col gap-4 overflow-y-auto rounded-t-2xl border border-line bg-card p-4 outline-none sm:rounded-2xl {side ? 'max-w-[1400px] md:p-5' : 'max-w-[960px] md:p-6'}"
 	>
 		<div class="flex items-center justify-between">
 			<h2 id="drawpad-title" class="text-[16px] font-medium">{image ? t('draw.titleOver') : t('draw.title')}</h2>
@@ -227,83 +232,87 @@
 			</button>
 		</div>
 
-		<div bind:clientWidth={stageWidth} class="checker grid place-items-center rounded-xl border border-line p-4">
-			<canvas
-				bind:this={canvas}
-				width={W}
-				height={H}
-				onpointerdown={down}
-				onpointermove={move}
-				onpointerup={up}
-				onpointercancel={up}
-				class="touch-none rounded-sm outline outline-1 outline-line-strong {tool === 'fill' ? 'cursor-cell' : 'cursor-crosshair'}"
-				style="height:{displayH}px;width:{displayH * aspect}px"
-				aria-label={t('draw.canvas')}
-			></canvas>
-		</div>
+		<div class={side ? 'flex min-h-0 gap-5' : 'contents'}>
+			<div bind:clientWidth={stageWidth} class="checker grid place-items-center rounded-xl border border-line p-4 {side ? 'min-w-0 flex-1' : ''}">
+				<canvas
+					bind:this={canvas}
+					width={W}
+					height={H}
+					onpointerdown={down}
+					onpointermove={move}
+					onpointerup={up}
+					onpointercancel={up}
+					class="touch-none rounded-sm outline outline-1 outline-line-strong {tool === 'fill' ? 'cursor-cell' : 'cursor-crosshair'}"
+					style="height:{displayH}px;width:{displayH * aspect}px"
+					aria-label={t('draw.canvas')}
+				></canvas>
+			</div>
 
-		<div class="flex flex-wrap items-center gap-x-6 gap-y-3">
-			<div class="seg" role="group" aria-label={t('draw.tool')}>
-				{#each TOOLS as tl (tl.id)}
-					<button
-						type="button"
-						aria-pressed={tool === tl.id}
-						onclick={() => (tool = tl.id)}
-						class="flex items-center gap-2"
-					>
-						<tl.icon size={16} strokeWidth={1.5} />
-						{t(`draw.${tl.id}`)}
+			<div class={side ? 'flex w-[300px] shrink-0 flex-col gap-4' : 'contents'}>
+				<div class={side ? 'flex flex-col gap-4' : 'flex flex-wrap items-center gap-x-6 gap-y-3'}>
+					<div class="seg {side ? 'w-full' : ''}" role="group" aria-label={t('draw.tool')}>
+						{#each TOOLS as tl (tl.id)}
+							<button
+								type="button"
+								aria-pressed={tool === tl.id}
+								onclick={() => (tool = tl.id)}
+								class="flex items-center justify-center gap-2 whitespace-nowrap {side ? 'flex-1 px-1.5!' : ''}"
+							>
+								<tl.icon size={16} strokeWidth={1.5} />
+								{t(`draw.${tl.id}`)}
+							</button>
+						{/each}
+					</div>
+
+					<div class="flex flex-wrap items-center gap-1 sm:gap-2" role="group" aria-label={t('draw.color')}>
+						{#each SOLID_COLORS as c (c)}
+							<button
+								type="button"
+								aria-label={c}
+								aria-pressed={color === c}
+								disabled={tool === 'eraser'}
+								onclick={() => (color = c)}
+								class="size-7 rounded-md border border-line-strong disabled:opacity-40 {color === c ? 'outline-2 outline-offset-2 outline-accent' : ''}"
+								style="background:{c}"
+							></button>
+						{/each}
+						<label class="relative size-7 overflow-hidden rounded-md border border-dashed border-line-strong" title={t('material.customColor')}>
+							<input type="color" bind:value={color} disabled={tool === 'eraser'} class="absolute inset-0 size-full cursor-pointer opacity-0" />
+							<span class="pointer-events-none grid size-full place-items-center text-[14px] text-muted">+</span>
+						</label>
+					</div>
+
+					<label class="flex w-full max-w-[320px] items-center gap-3 {tool === 'fill' ? 'opacity-40' : ''}">
+						<span class="text-[13px] text-fg2">{t('draw.size')}</span>
+						<input type="range" min="1" max="24" step="1" bind:value={size} disabled={tool === 'fill'} class="flex-1" />
+						<!-- 実際の太さ（絵文字 1 倍のときの見え方の 2 倍）を点で見せる -->
+						<span class="grid size-8 shrink-0 place-items-center">
+							<span
+								class="rounded-full outline outline-1 outline-line-strong"
+								style="width:{Math.max(2, size * 1.25)}px;height:{Math.max(2, size * 1.25)}px;background:{tool === 'eraser' ? 'transparent' : color}"
+							></span>
+						</span>
+					</label>
+				</div>
+
+				<div class="flex flex-wrap items-center gap-2 border-t border-line pt-4 {side ? 'mt-auto' : ''}">
+					<button type="button" class="btn btn-ghost btn-sm px-2" aria-label={t('draw.undo')} title={t('draw.undo')} disabled={!past.length} onclick={undo}>
+						<Undo2 size={16} strokeWidth={1.5} />
 					</button>
-				{/each}
-			</div>
-
-			<div class="flex flex-wrap items-center gap-1 sm:gap-2" role="group" aria-label={t('draw.color')}>
-				{#each SOLID_COLORS as c (c)}
-					<button
-						type="button"
-						aria-label={c}
-						aria-pressed={color === c}
-						disabled={tool === 'eraser'}
-						onclick={() => (color = c)}
-						class="size-7 rounded-md border border-line-strong disabled:opacity-40 {color === c ? 'outline-2 outline-offset-2 outline-accent' : ''}"
-						style="background:{c}"
-					></button>
-				{/each}
-				<label class="relative size-7 overflow-hidden rounded-md border border-dashed border-line-strong" title={t('material.customColor')}>
-					<input type="color" bind:value={color} disabled={tool === 'eraser'} class="absolute inset-0 size-full cursor-pointer opacity-0" />
-					<span class="pointer-events-none grid size-full place-items-center text-[14px] text-muted">+</span>
-				</label>
-			</div>
-
-			<label class="flex w-full max-w-[320px] items-center gap-3 {tool === 'fill' ? 'opacity-40' : ''}">
-				<span class="text-[13px] text-fg2">{t('draw.size')}</span>
-				<input type="range" min="1" max="24" step="1" bind:value={size} disabled={tool === 'fill'} class="flex-1" />
-				<!-- 実際の太さ（絵文字 1 倍のときの見え方の 2 倍）を点で見せる -->
-				<span class="grid size-8 shrink-0 place-items-center">
-					<span
-						class="rounded-full outline outline-1 outline-line-strong"
-						style="width:{Math.max(2, size * 1.25)}px;height:{Math.max(2, size * 1.25)}px;background:{tool === 'eraser' ? 'transparent' : color}"
-					></span>
-				</span>
-			</label>
-		</div>
-
-		<div class="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-			<button type="button" class="btn btn-ghost btn-sm px-2" aria-label={t('draw.undo')} title={t('draw.undo')} disabled={!past.length} onclick={undo}>
-				<Undo2 size={16} strokeWidth={1.5} />
-			</button>
-			<button type="button" class="btn btn-ghost btn-sm px-2" aria-label={t('draw.redo')} title={t('draw.redo')} disabled={!future.length} onclick={redo}>
-				<Redo2 size={16} strokeWidth={1.5} />
-			</button>
-			<button type="button" class="btn btn-ghost btn-sm" onclick={clear} disabled={!ready}>
-				<Trash2 size={16} strokeWidth={1.5} />
-				{t('draw.clear')}
-			</button>
-			<div class="ml-auto flex items-center gap-2">
-				<button type="button" class="btn btn-secondary" onclick={oncancel}>{t('draw.cancel')}</button>
-				<button type="button" class="btn btn-primary" onclick={done} disabled={!ready || (!dirty && !image)}>
-					{t('draw.done')}
-				</button>
+					<button type="button" class="btn btn-ghost btn-sm px-2" aria-label={t('draw.redo')} title={t('draw.redo')} disabled={!future.length} onclick={redo}>
+						<Redo2 size={16} strokeWidth={1.5} />
+					</button>
+					<button type="button" class="btn btn-ghost btn-sm" onclick={clear} disabled={!ready}>
+						<Trash2 size={16} strokeWidth={1.5} />
+						{t('draw.clear')}
+					</button>
+					<div class="flex items-center gap-2 {side ? 'w-full [&>button]:flex-1' : 'ml-auto'}">
+						<button type="button" class="btn btn-secondary" onclick={oncancel}>{t('draw.cancel')}</button>
+						<button type="button" class="btn btn-primary" onclick={done} disabled={!ready || (!dirty && !image)}>
+							{t('draw.done')}
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
