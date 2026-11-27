@@ -2,9 +2,7 @@ import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import { createSurface, createWorkspace, prepare, renderBase, renderFrame, resolveEffects } from './draw';
 import { isAnimated, type Recipe } from './recipe';
 import type { Ctx2D } from './effects';
-
-/** Nagi が gif_128 / png_128 として受け付ける blob の上限（nagi_client の MAX_EMOJI_BLOB_SIZE）。 */
-export const MAX_EMOJI_BYTES = 262_144;
+import { MAX_EMOJI_BYTES } from '$lib/atproto/bluemoji';
 
 /** 上限を超えたら、コマ数 → 色数の順に落として作り直す。 */
 export const GIF_ATTEMPTS = [

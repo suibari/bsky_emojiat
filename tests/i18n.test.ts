@@ -13,9 +13,9 @@ describe('i18n', () => {
 
 	it('switches language and fills parameters', () => {
 		i18n.lang = 'en';
-		expect(t('editor.limit', { kb: 256 })).toBe('Limit 256KB');
+		expect(t('editor.limit', { kb: 128 })).toBe('Limit 128KB');
 		i18n.lang = 'ja';
-		expect(t('editor.limit', { kb: 256 })).toBe('上限 256KB');
+		expect(t('editor.limit', { kb: 128 })).toBe('上限 128KB');
 	});
 
 	it('has English names for fonts, effects, categories and gradients', () => {

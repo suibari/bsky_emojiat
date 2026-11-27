@@ -11,8 +11,8 @@
 	import DrawPad from '$lib/components/DrawPad.svelte';
 	import { defaultImage, defaultRecipe, emojiSize, isAnimated, normalizeRecipe, usesImage, type Recipe } from '$lib/render/recipe';
 	import { importImage } from '$lib/render/image';
-	import { MAX_EMOJI_BYTES, encodeEmoji, type Encoded } from '$lib/render/encode';
-	import { EMOJI_NAME_PATTERN, altOf, saveEmoji } from '$lib/atproto/bluemoji';
+	import { encodeEmoji, type Encoded } from '$lib/render/encode';
+	import { EMOJI_NAME_PATTERN, MAX_EMOJI_BYTES, altOf, saveEmoji } from '$lib/atproto/bluemoji';
 	import { session } from '$lib/atproto/session.svelte';
 	import { rememberEmoji } from '$lib/store/history';
 	import { getLocal } from '$lib/store/local';
@@ -142,7 +142,7 @@
 		if (result.tooLarge) {
 			notice = {
 				kind: 'error',
-				text: t('editor.tooLarge', { size: Math.round(result.blob.size / 1024), max: MAX_EMOJI_BYTES / 1024 })
+				text: t('editor.tooLarge', { size: Math.round(result.blob.size / 1000), max: MAX_EMOJI_BYTES / 1000 })
 			};
 			return null;
 		}
@@ -278,7 +278,7 @@
 		</div>
 		<div class="flex items-center justify-between font-mono text-[12px] text-muted">
 			<span>{animated ? 'GIF' : 'PNG'} · {size.width}×{size.height}</span>
-			<span>{t('editor.limit', { kb: MAX_EMOJI_BYTES / 1024 })}</span>
+			<span>{t('editor.limit', { kb: MAX_EMOJI_BYTES / 1000 })}</span>
 		</div>
 		<ChatMock {recipe} name={nameValid ? name : 'emoji'} />
 	</section>

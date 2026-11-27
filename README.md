@@ -18,7 +18,7 @@
 
 PDS には [Bluemoji](https://github.com/aendra-rininsland/bluemoji) 形式の `blue.moji.collection.item` で保存します。
 Nagi と同じ形式なので、保存した絵文字はそのまま Nagi の絵文字ピッカーに出ます。
-画像は `formats_v0` の `png_128`（静止画）または `gif_128`（アニメ）に、256KB 以下の blob として入れます。
+画像は `formats_v1` の `png_128`（静止画）または `gif_128`（アニメ）に、128,000 バイト以下の blob として入れます。
 
 ### PDS の絵文字を編集しない理由
 
