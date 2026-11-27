@@ -8,7 +8,8 @@ import type { Recipe } from '$lib/render/recipe';
  * 作り方の設定（レシピ）は PDS に置かない。PDS の絵文字は作成と削除だけで、編集はしない。
  */
 export const BLUEMOJI_ITEM = 'blue.moji.collection.item';
-const FORMATS_V0 = `${BLUEMOJI_ITEM}#formats_v0`;
+const FORMATS_V1 = `${BLUEMOJI_ITEM}#formats_v1`;
+export const MAX_EMOJI_BYTES = 128_000;
 export const EMOJI_NAME_PATTERN = /^[a-zA-Z0-9_-]{1,32}$/;
 
 const FORMAT_KEY: Record<string, string> = {
@@ -64,7 +65,7 @@ export function buildItemRecord(input: {
 		adultOnly: false,
 		fallbackText: '◌',
 		createdAt: input.createdAt,
-		formats: { $type: FORMATS_V0, [key]: input.blob }
+		formats: { $type: FORMATS_V1, [key]: input.blob }
 	};
 }
 
@@ -85,6 +86,7 @@ async function pdsUrl(agent: Agent) {
  * まで固定して参照するため、同じ rkey に上書きすると過去の投稿の絵文字が表示できなくなる。
  */
 export async function saveEmoji(agent: Agent, opts: { name: string; alt: string; blob: Blob }) {
+	if (opts.blob.size > MAX_EMOJI_BYTES) throw new Error('Emoji exceeds the Bluemoji format limit');
 	const did = agent.assertDid;
 	const uploaded = await agent.com.atproto.repo.uploadBlob(opts.blob, { encoding: opts.blob.type });
 	const rkey = createRkey();
@@ -136,7 +138,7 @@ export async function listEmojis(agent: Agent): Promise<PdsEmoji[]> {
 		};
 		if (typeof v.name !== 'string' || !v.formats) continue;
 		let media: { cid: string; mimeType: string } | undefined;
-		for (const key of ['gif_128', 'webp_128', 'png_128', 'original']) {
+		for (const key of ['apng_128', 'gif_128', 'webp_128', 'png_128', 'original']) {
 			media = blobInfo(v.formats[key]);
 			if (media) break;
 		}

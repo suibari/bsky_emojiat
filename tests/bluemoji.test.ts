@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { BLUEMOJI_ITEM, altOf, blobInfo, buildItemRecord, createRkey } from '../src/lib/atproto/bluemoji';
+import { describe, expect, it, vi } from 'vitest';
+import { BLUEMOJI_ITEM, MAX_EMOJI_BYTES, altOf, blobInfo, buildItemRecord, createRkey, saveEmoji } from '../src/lib/atproto/bluemoji';
 import { defaultImage, defaultRecipe, normalizeRecipe } from '../src/lib/render/recipe';
 
 const blob = { $type: 'blob', ref: { $link: 'bafkreiexample' }, mimeType: 'image/gif', size: 1234 };
@@ -14,7 +14,7 @@ describe('buildItemRecord', () => {
 			adultOnly: false,
 			fallbackText: '◌',
 			createdAt: '2026-11-04T00:00:00.000Z',
-			formats: { $type: `${BLUEMOJI_ITEM}#formats_v0`, gif_128: blob }
+			formats: { $type: `${BLUEMOJI_ITEM}#formats_v1`, gif_128: blob }
 		});
 		// fallbackText は 1 書記素・10文字以内
 		expect([...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(rec.fallbackText)]).toHaveLength(1);
@@ -25,6 +25,18 @@ describe('buildItemRecord', () => {
 		expect(Object.keys(rec.formats)).toContain('png_128');
 		expect('alt' in rec).toBe(false);
 		expect(() => buildItemRecord({ name: 'a', alt: '', blob, mimeType: 'image/jpeg', createdAt: 'x' })).toThrow();
+	});
+});
+
+describe('saveEmoji', () => {
+	it('rejects data above the v1 slot limit before uploading it', async () => {
+		const uploadBlob = vi.fn();
+		const agent = { com: { atproto: { repo: { uploadBlob } } } };
+		const image = new Blob([new Uint8Array(MAX_EMOJI_BYTES + 1)], { type: 'image/gif' });
+		await expect(saveEmoji(agent as unknown as Parameters<typeof saveEmoji>[0], {
+			name: 'large', alt: '', blob: image
+		})).rejects.toThrow('format limit');
+		expect(uploadBlob).not.toHaveBeenCalled();
 	});
 });
 
