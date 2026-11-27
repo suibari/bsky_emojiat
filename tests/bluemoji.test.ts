@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BLUEMOJI_ITEM, MAX_EMOJI_BYTES, altOf, blobInfo, buildItemRecord, createRkey, saveEmoji } from '../src/lib/atproto/bluemoji';
+import { jsonToLex, type Agent } from '@atproto/api';
+import { BLUEMOJI_ITEM, MAX_EMOJI_BYTES, altOf, blobInfo, buildItemRecord, createRkey, downloadEmoji, listEmojis, saveEmoji } from '../src/lib/atproto/bluemoji';
 import { defaultImage, defaultRecipe, normalizeRecipe } from '../src/lib/render/recipe';
 
-const blob = { $type: 'blob', ref: { $link: 'bafkreiexample' }, mimeType: 'image/gif', size: 1234 };
+const cid = 'bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku';
+const blob = { $type: 'blob', ref: { $link: cid }, mimeType: 'image/gif', size: 1234 };
+// 1×1 pixel, two frames.
+const apng = Uint8Array.from(Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACGFjVEwAAAACAAAAAPONk3AAAAAaZmNUTAAAAAAAAAABAAAAAQAAAAAAAAAAAGQD6AAAs35jzQAAAAxJREFUeJxj+M/AAAADAQEAyf6S7wAAABpmY1RMAAAAAQAAAAEAAAABAAAAAAAAAAAAZAPoAAAoDYkZAAAAEGZkQVQAAAACeJxjYGD4DwABAwEAaL/t9AAAAABJRU5ErkJggg==',
+	'base64'
+));
 
 describe('buildItemRecord', () => {
 	it('matches the shape Nagi reads (nagi_client fetchMyBluemoji)', () => {
@@ -29,6 +36,22 @@ describe('buildItemRecord', () => {
 });
 
 describe('saveEmoji', () => {
+	it('uploads a GIF in the v1 GIF slot', async () => {
+		const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+		const image = new Blob([gif], { type: 'image/gif' });
+		const uploaded = { ...blob, mimeType: image.type, size: image.size };
+		const uploadBlob = vi.fn().mockResolvedValue({ data: { blob: uploaded } });
+		const createRecord = vi.fn();
+		const agent = { assertDid: 'did:plc:example', com: { atproto: { repo: { uploadBlob, createRecord } } } };
+		await saveEmoji(agent as unknown as Agent, { name: 'dot', alt: '', blob: image });
+		expect(uploadBlob).toHaveBeenCalledWith(image, { encoding: 'image/gif' });
+		expect(createRecord).toHaveBeenCalledWith(expect.objectContaining({
+			record: expect.objectContaining({
+				formats: { $type: `${BLUEMOJI_ITEM}#formats_v1`, gif_128: uploaded }
+			})
+		}));
+	});
+
 	it('rejects data above the v1 slot limit before uploading it', async () => {
 		const uploadBlob = vi.fn();
 		const agent = { com: { atproto: { repo: { uploadBlob } } } };
@@ -67,14 +90,66 @@ describe('normalizeRecipe', () => {
 
 describe('blobInfo', () => {
 	it('reads raw JSON refs', () => {
-		expect(blobInfo({ ref: { $link: 'bafyA' }, mimeType: 'image/gif', size: 1 })).toEqual({ cid: 'bafyA', mimeType: 'image/gif' });
+		expect(blobInfo(blob)).toEqual({ cid, mimeType: 'image/gif', size: blob.size });
 	});
-	it('reads refs decoded into CID objects by @atproto/api', () => {
-		const cid = { toString: () => 'bafyB' };
-		expect(blobInfo({ ref: cid, mimeType: 'image/webp', size: 1 })).toEqual({ cid: 'bafyB', mimeType: 'image/webp' });
+	it('reads BlobRefs and CID objects decoded by @atproto/api', () => {
+		const decoded = jsonToLex({ $link: cid });
+		const expected = { cid, mimeType: 'image/gif', size: blob.size };
+		expect(blobInfo(jsonToLex(blob))).toEqual(expected);
+		expect(blobInfo({ ...blob, ref: decoded })).toEqual(expected);
 	});
 	it('rejects missing refs', () => {
 		expect(blobInfo({ mimeType: 'image/png' })).toBeUndefined();
 		expect(blobInfo({ ref: {}, mimeType: 'image/png' })).toBeUndefined();
+	});
+});
+
+describe('listEmojis', () => {
+	it('prefers the v1 APNG and retains larger v0 GIFs and original raster images', async () => {
+		const did = 'did:plc:example';
+		const formatsList = [
+			{ $type: `${BLUEMOJI_ITEM}#formats_v1`, gif_128: blob, apng_128: { ...blob, mimeType: 'image/png', size: apng.length } },
+			{ $type: `${BLUEMOJI_ITEM}#formats_v0`, gif_128: { ...blob, size: 200_000 } },
+			{ $type: `${BLUEMOJI_ITEM}#formats_v1`, original: { ...blob, mimeType: 'image/jpeg', size: 200_000 } },
+			{ $type: `${BLUEMOJI_ITEM}#formats_v1`, lottie: { ...blob, mimeType: 'application/lottie+zip' }, png_128: { ...blob, mimeType: 'image/png' } }
+		];
+		const records = formatsList.map((formats, index) => ({
+			uri: `at://${did}/${BLUEMOJI_ITEM}/emoji${index}`,
+			value: { name: `:emoji${index}:`, formats }
+		}));
+		const listRecords = vi.fn().mockResolvedValue({ data: { records } });
+		const agent = {
+			assertDid: did,
+			sessionManager: { getTokenInfo: async () => ({ aud: 'https://pds.example' }) },
+			com: { atproto: { repo: { listRecords } } }
+		};
+		const emojis = await listEmojis(agent as unknown as Agent);
+		expect(emojis.map(({ mimeType, size }) => [mimeType, size])).toEqual([
+			['image/png', apng.length], ['image/gif', 200_000], ['image/jpeg', 200_000], ['image/png', blob.size]
+		]);
+		expect(emojis[0].url).toBe(`https://pds.example/xrpc/com.atproto.sync.getBlob?${new URLSearchParams({ did, cid })}`);
+	});
+});
+
+describe('downloadEmoji', () => {
+	it('preserves the bytes and extension of an APNG streamed without Content-Length', async () => {
+		const parts = [apng.subarray(0, 20), apng.subarray(20)];
+		const body = new ReadableStream({
+			start(controller) {
+				for (const part of parts) controller.enqueue(part);
+				controller.close();
+			}
+		});
+		const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(body));
+		try {
+			const result = await downloadEmoji({
+				url: 'https://pds.example/blob', mimeType: 'image/apng', size: apng.length, name: ':dot:'
+			});
+			expect(result.filename).toBe('dot.png');
+			expect(result.blob.type).toBe('image/apng');
+			expect(new Uint8Array(await result.blob.arrayBuffer())).toEqual(apng);
+		} finally {
+			fetch.mockRestore();
+		}
 	});
 });
