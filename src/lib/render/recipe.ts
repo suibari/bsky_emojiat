@@ -93,7 +93,7 @@ export const defaultRecipe = (): Recipe => ({
 	text: 'えもじ\nあっと',
 	font: 'mplus',
 	fill: { kind: 'solid', color: '#1185fe' },
-	stroke: { enabled: true, color: '#ffffff', width: 6 },
+	stroke: { enabled: false, color: '#ffffff', width: 6 },
 	italic: false,
 	vertical: false,
 	lineHeight: 1.05,
