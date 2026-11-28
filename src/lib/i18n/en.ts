@@ -109,6 +109,7 @@ export const en: Record<MessageKey, string> = {
 	'library.emptyLink': 'Create',
 	'library.emptyAfter': ' your first one',
 	'library.download': 'Download',
+	'library.downloadFailed': 'Could not download this emoji',
 	'library.delete': 'Delete',
 	'library.deletePdsNote': 'It will also disappear from posts and reactions that used it',
 	'library.confirmDelete': 'Delete',

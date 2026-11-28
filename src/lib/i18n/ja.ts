@@ -107,6 +107,7 @@ export const ja = {
 	'library.emptyLink': '作る',
 	'library.emptyAfter': 'から始めましょう',
 	'library.download': 'ダウンロード',
+	'library.downloadFailed': '絵文字をダウンロードできませんでした',
 	'library.delete': '削除',
 	'library.deletePdsNote': 'この絵文字を使った投稿やリアクションでも表示されなくなります',
 	'library.confirmDelete': '削除する',

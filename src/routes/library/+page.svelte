@@ -2,7 +2,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { onMount } from 'svelte';
 	import { ArrowUpRight, Download, Pencil, Trash2, Upload } from 'lucide-svelte';
-	import { altOf, deleteEmoji, displayName, listEmojis, saveEmoji, type PdsEmoji } from '$lib/atproto/bluemoji';
+	import { altOf, deleteEmoji, displayName, downloadEmoji, listEmojis, saveEmoji, type PdsEmoji } from '$lib/atproto/bluemoji';
 	import { session } from '$lib/atproto/session.svelte';
 	import { deleteLocal, listLocal, putLocal, type LocalEmoji } from '$lib/store/local';
 	import { NAGI_URL } from '$lib/nagi';
@@ -50,11 +50,15 @@
 	}
 
 	async function downloadPds(e: PdsEmoji) {
-		const res = await fetch(e.url);
-		const blob = await res.blob();
-		const url = URL.createObjectURL(blob);
-		downloadBlob(url, `${displayName(e.name)}.${e.mimeType === 'image/gif' ? 'gif' : 'png'}`);
-		setTimeout(() => URL.revokeObjectURL(url), 1000);
+		try {
+			const { blob, filename } = await downloadEmoji(e);
+			const url = URL.createObjectURL(blob);
+			downloadBlob(url, filename);
+			setTimeout(() => URL.revokeObjectURL(url), 1000);
+		} catch {
+			pdsError = t('library.downloadFailed');
+			pdsState = 'error';
+		}
 	}
 
 	async function removeLocal(id: string) {
