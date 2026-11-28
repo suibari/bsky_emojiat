@@ -9,7 +9,13 @@ export type Frame = {
 	s: number;
 	/** 文字の主な色（塗りが単色ならその色、グラデなら先頭色） */
 	color: string;
+	/** 1文字ずつの区画（読む順）。画像から作るときは空。 */
+	glyphs: Box[];
+	/** 背景色が敷かれているか。透過GIFでは消えてしまう光のにじみを、このときだけ描く */
+	opaque: boolean;
 };
+
+export type Box = { x0: number; y0: number; x1: number; y1: number };
 
 export type Transform = { dx: number; dy: number; sx: number; sy: number; rot: number; alpha: number };
 
