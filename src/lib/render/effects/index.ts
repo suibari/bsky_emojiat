@@ -10,6 +10,10 @@ import {
 	type Frame
 } from './types';
 
+import { elementBreak, elementShine } from './elements';
+import { moreBreak, moreColor, moreDecorate, moreShine } from './filters';
+import { moreAppear, moreMove } from './motion';
+
 export * from './types';
 
 /* ---------- 動かす ---------- */
@@ -109,8 +113,8 @@ const appear: Effect[] = [
 	{
 		id: 'zoomin',
 		category: 'appear',
-		label: 'ズーム',
-		labelEn: 'Zoom in',
+		label: '拡大登場',
+		labelEn: 'Scale in',
 		description: '小さい状態から勢いよく大きくなって現れる。登場、ドーン、強調、発表',
 		transform: (f, tr) => {
 			const k = easeOutBack(clamp01(f.t / 0.35));
@@ -453,5 +457,20 @@ const decorate: Effect[] = [
 	}
 ];
 
-export const EFFECTS: Effect[] = [...move, ...appear, ...color, ...shine, ...breakFx, ...decorate];
+export const EFFECTS: Effect[] = [
+	...move,
+	...moreMove,
+	...appear,
+	...moreAppear,
+	...color,
+	...moreColor,
+	...shine,
+	...moreShine,
+	...elementShine,
+	...breakFx,
+	...moreBreak,
+	...elementBreak,
+	...decorate,
+	...moreDecorate
+];
 export const effectById = (id: string) => EFFECTS.find((e) => e.id === id);

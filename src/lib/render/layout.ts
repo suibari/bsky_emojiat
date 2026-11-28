@@ -34,7 +34,7 @@ export const splitLines = (text: string) =>
 		.map((line) => line.trim())
 		.filter((line) => line.length > 0);
 
-const graphemes = (value: string) =>
+export const graphemes = (value: string) =>
 	typeof Intl !== 'undefined' && 'Segmenter' in Intl
 		? [...new Intl.Segmenter('ja', { granularity: 'grapheme' }).segment(value)].map((s) => s.segment)
 		: [...value];
@@ -81,5 +81,48 @@ export function layoutText(input: LayoutInput): Placement[] {
 			out.push({ text: c, cx, cy: pad + cellH * (i + 0.5), sx, sy, measure: ms[i] });
 		});
 	});
+	return out;
+}
+
+/** 1文字ぶんの区画。区画どうしは重ならず、合わせると枠全体を覆う。 */
+export type Cell = { x0: number; y0: number; x1: number; y1: number };
+
+const mids = (centers: number[]) => centers.slice(1).map((c, i) => (centers[i] + c) / 2);
+
+/**
+ * 文字ごとの区画を読む順に返す。1文字ずつ動かすエフェクトが、字をこの区画で切り出して使う。
+ * 横書きの行は charEdges(行) が返す文字の境目（キャンバス上の x）で区切る。
+ */
+export function glyphCells(
+	placements: Placement[],
+	width: number,
+	height: number,
+	vertical: boolean,
+	charEdges: (p: Placement) => number[]
+): Cell[] {
+	if (placements.length === 0) return [];
+	const out: Cell[] = [];
+	if (!vertical) {
+		const ys = [0, ...mids(placements.map((p) => p.cy)), height];
+		placements.forEach((p, i) => {
+			const xs = [0, ...charEdges(p), width];
+			for (let k = 0; k < xs.length - 1; k++) out.push({ x0: xs[k], y0: ys[i], x1: xs[k + 1], y1: ys[i + 1] });
+		});
+		return out;
+	}
+	// 縦書き: 同じ列（cx が同じ）をまとめる。列は右から読む。
+	const cols: Placement[][] = [];
+	for (const p of placements) {
+		const col = cols.find((c) => c[0].cx === p.cx);
+		if (col) col.push(p);
+		else cols.push([p]);
+	}
+	const byX = [...cols].sort((a, b) => a[0].cx - b[0].cx);
+	const xs = [0, ...mids(byX.map((c) => c[0].cx)), width];
+	for (const col of cols) {
+		const j = byX.indexOf(col);
+		const ys = [0, ...mids(col.map((p) => p.cy)), height];
+		col.forEach((_, i) => out.push({ x0: xs[j], y0: ys[i], x1: xs[j + 1], y1: ys[i + 1] }));
+	}
 	return out;
 }

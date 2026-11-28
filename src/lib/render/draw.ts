@@ -1,9 +1,9 @@
 import { cssFont, fontById } from './fonts';
-import { layoutText, type Measure } from './layout';
+import { glyphCells, graphemes, layoutText, type Measure } from './layout';
 import { emojiSize, usesImage, type ImageSource, type Recipe } from './recipe';
 import { ensureFont } from './fonts';
 import { ensureImage, imageRect, imageSurface } from './image';
-import { effectById, type Ctx2D, type Effect, type Frame, type Surface, type Transform } from './effects';
+import { effectById, type Box, type Ctx2D, type Effect, type Frame, type Surface, type Transform } from './effects';
 
 const REF = 100;
 const ITALIC_SKEW = -0.22;
@@ -27,6 +27,8 @@ export type BaseLayers = {
 	color: string;
 	/** 塗りの層が画像か。色系エフェクトは画像を塗りつぶさず、上から重ねる */
 	image: boolean;
+	/** 1文字ずつの区画（読む順） */
+	glyphs: Box[];
 };
 
 /** 描く前に必要なもの（書体か画像）を読み込む。 */
@@ -56,7 +58,7 @@ function renderImageBase(recipe: Recipe, image: ImageSource, scale: number): Bas
 	const strokePx = recipe.stroke.enabled ? recipe.stroke.width * scale : 0;
 	const color = recipe.stroke.enabled ? recipe.stroke.color : '#ffffff';
 	const src = imageSurface(image);
-	if (!src) return { stroke, fill, w, h, scale, color, image: true };
+	if (!src) return { stroke, fill, w, h, scale, color, image: true, glyphs: [] };
 
 	// 縁取りが枠からはみ出さないよう、余白に縁取りの太さを足す
 	const pad = recipe.padding * h + strokePx;
@@ -82,7 +84,7 @@ function renderImageBase(recipe: Recipe, image: ImageSource, scale: number): Bas
 		for (const [dx, dy] of ringOffsets(strokePx)) sctx.drawImage(silhouette, dx, dy);
 		sctx.drawImage(silhouette, 0, 0);
 	}
-	return { stroke, fill, w, h, scale, color, image: true };
+	return { stroke, fill, w, h, scale, color, image: true, glyphs: [] };
 }
 
 export function renderBase(recipe: Recipe, scale: number): BaseLayers {
@@ -165,7 +167,14 @@ export function renderBase(recipe: Recipe, scale: number): BaseLayers {
 	fctx.globalCompositeOperation = 'source-over';
 
 	const color = recipe.fill.kind === 'solid' ? recipe.fill.color : recipe.fill.stops[0];
-	return { stroke, fill, w, h, scale, color, image: false };
+	// 横書きの行は、先頭からの文字幅で文字の境目を出す
+	const glyphs = glyphCells(placements, w, h, recipe.vertical, (p) => {
+		const chars = graphemes(p.text);
+		const m = p.measure as Measure & { left: number };
+		const x = -m.width / 2 + m.left;
+		return chars.slice(1).map((_, k) => p.cx + (x + measurer.measureText(chars.slice(0, k + 1).join('')).width) * p.sx);
+	});
+	return { stroke, fill, w, h, scale, color, image: false, glyphs };
 }
 
 /** フレーム描画で使い回す作業用キャンバス。 */
@@ -188,7 +197,7 @@ export function renderFrame(
 	ws: Workspace
 ) {
 	const { w, h } = base;
-	const f: Frame = { t, w, h, s: base.scale, color: base.color };
+	const f: Frame = { t, w, h, s: base.scale, color: base.color, glyphs: base.glyphs, opaque: recipe.background !== null };
 
 	// 1. 塗りの層に色系エフェクト
 	let fillSrc: Surface = base.fill;
