@@ -71,6 +71,12 @@ describe('glyphCells', () => {
 		const area = cells.reduce((a, c) => a + (c.x1 - c.x0) * (c.y1 - c.y0), 0);
 		expect(area).toBeCloseTo(128 * 128);
 	});
+	it('keeps horizontal boundaries finite, ordered and inside the tile', () => {
+		const p = layoutText({ ...base, text: 'あいうえお', width: 128, height: 128 });
+		const cells = glyphCells(p, 128, 128, false, () => [40, 39, Number.NaN, 130]);
+		expect(cells.map(({ x0, x1 }) => [x0, x1])).toEqual([[0, 40], [40, 40], [40, 40], [40, 128], [128, 128]]);
+	});
+
 	it('orders vertical columns right to left', () => {
 		const p = layoutText({ ...base, vertical: true, text: 'あい\nう', width: 128, height: 128 });
 		const cells = glyphCells(p, 128, 128, true, edges);

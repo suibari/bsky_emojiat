@@ -9,20 +9,20 @@ const cellsOf = (f: Frame): Box[] => (f.glyphs.length ? f.glyphs : [{ x0: 0, y0:
 
 /** src を区画で切り抜いて描く。 */
 function drawCell(ctx: Ctx2D, src: Surface, cell: Box, clip?: { y0: number; y1: number }) {
-	ctx.save();
-	ctx.beginPath();
 	const y0 = Math.max(cell.y0, clip?.y0 ?? -Infinity);
 	const y1 = Math.min(cell.y1, clip?.y1 ?? Infinity);
-	ctx.rect(cell.x0, y0, cell.x1 - cell.x0, y1 - y0);
-	ctx.clip();
-	ctx.drawImage(src, 0, 0);
-	ctx.restore();
+	const w = cell.x1 - cell.x0;
+	const h = y1 - y0;
+	if (w <= 0 || h <= 0) return;
+	ctx.drawImage(src, cell.x0, y0, w, h, cell.x0, y0, w, h);
 }
 
 /** 区画の中で字が実際にある上下の範囲。区画の下端は行間の真ん中なので、字の下端に寄せる。 */
 function inkRange(cell: Box, ink: Box | null) {
 	if (!ink) return { y0: cell.y0, y1: cell.y1 };
-	return { y0: Math.max(cell.y0, ink.y0), y1: Math.min(cell.y1, ink.y1) };
+	const y0 = Math.max(cell.y0, ink.y0);
+	const y1 = Math.min(cell.y1, ink.y1);
+	return y0 < y1 ? { y0, y1 } : { y0: cell.y0, y1: cell.y1 };
 }
 
 /* 残像ダッシュの横位置（幅に対する割合）。溜めて右へ抜け、左から滑り込む。 */
@@ -183,18 +183,17 @@ export const moreMove: Effect[] = [
 			const cells = cellsOf(f);
 			const ink = alphaBox(src, f);
 			const lag = Math.min(0.06, 0.16 / Math.max(1, cells.length - 1));
-			const piece = scratch('hop-piece', f.w, f.h);
 			cells.forEach((cell, i) => {
 				const u = 0.04 + i * lag;
 				const pose = hopPose(ramp(frac(f.t), u, u + 0.76));
-				piece.ctx.clearRect(0, 0, f.w, f.h);
-				drawCell(piece.ctx, src, cell);
-				const range = inkRange(cell, ink);
-				drawAt(dst, piece.canvas, (cell.x0 + cell.x1) / 2, range.y1, {
-					ty: pose.dy * f.h,
-					sx: pose.sx,
-					sy: pose.sy
-				});
+				const cx = (cell.x0 + cell.x1) / 2;
+				const cy = inkRange(cell, ink).y1;
+				dst.save();
+				dst.translate(cx, cy + pose.dy * f.h);
+				dst.scale(pose.sx, pose.sy);
+				dst.translate(-cx, -cy);
+				drawCell(dst, src, cell);
+				dst.restore();
 			});
 		}
 	},
