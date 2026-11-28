@@ -105,8 +105,13 @@ export function glyphCells(
 	if (!vertical) {
 		const ys = [0, ...mids(placements.map((p) => p.cy)), height];
 		placements.forEach((p, i) => {
-			const xs = [0, ...charEdges(p), width];
-			for (let k = 0; k < xs.length - 1; k++) out.push({ x0: xs[k], y0: ys[i], x1: xs[k + 1], y1: ys[i + 1] });
+			let x0 = 0;
+			for (const edge of [...charEdges(p), width]) {
+				// 文字送り幅とインク幅は異なるため、測った境目は枠外や前の境目より左に来ることがある。
+				const x1 = Number.isFinite(edge) ? Math.min(width, Math.max(x0, edge)) : x0;
+				out.push({ x0, y0: ys[i], x1, y1: ys[i + 1] });
+				x0 = x1;
+			}
 		});
 		return out;
 	}
